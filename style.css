@@ -637,3 +637,62 @@ input:focus, textarea:focus, select:focus {
   border: none;
   cursor: pointer;
 }
+/* মোবাইল চ্যাট ভিউ এবং ইনপুট বক্স ফিক্স */
+@media (max-width: 650px) {
+  .messenger-container {
+    flex-direction: column;
+    height: 100vh;
+  }
+  .messenger-sidebar {
+    display: none; /* মোবাইলে চ্যাট স্ক্রিন পুরোটা জুড়ে দেখাবে */
+  }
+  .messenger-main {
+    width: 100% !important;
+    height: 100vh;
+  }
+}
+
+/* চ্যাট ফুটার ক্লিন ডিজাইন */
+.chat-footer {
+  padding: 10px 12px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.file-btn {
+  font-size: 22px;
+  cursor: pointer;
+  padding: 6px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+
+.chat-footer input[type="text"] {
+  flex: 1;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 22px;
+  font-size: 15px;
+  background: #f8fafc;
+  outline: none;
+}
+
+.chat-footer button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
