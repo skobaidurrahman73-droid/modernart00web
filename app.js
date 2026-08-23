@@ -1,5 +1,5 @@
 import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
-import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const $ = id => document.getElementById(id);
@@ -15,8 +15,8 @@ document.addEventListener("DOMContentLoaded", applyBranding);
 
 // Customer Auth
 window.customerLogin = async function(){
-  const phone=$("phone").value.trim(), receipt=$("receiptId").value.trim();
-  if(!phone || !receipt) return alert("ফোন নম্বর এবং Receipt ID দিন।");
+  const phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
+  if(!phone) return alert("ফোন নম্বর দিন।");
   
   try {
     const snap = await getDoc(doc(db, "customers", phone));
@@ -30,14 +30,14 @@ window.customerLogin = async function(){
 };
 
 window.registerCustomer = async function(){
-  const name=$("name").value.trim(), phone=$("phone").value.trim(), receipt=$("receiptId").value.trim();
-  if(!name||!phone||!receipt) return alert("সব তথ্য পূরণ করুন।");
+  const name=$("name").value.trim(), phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
+  if(!name||!phone) return alert("সব তথ্য পূরণ করুন।");
   
   try {
     await ensureFirebaseUser();
     await setDoc(doc(db, "customers", phone), {
       name, phone, receiptId: receipt, vip: false,
-      vipRequested: $("vipRequest").checked, createdAt: Date.now()
+      vipRequested: $("vipRequest")?$("vipRequest").checked:false, createdAt: Date.now()
     });
     localStorage.setItem("currentCustomer", phone);
     alert("Account তৈরি হয়েছে।");
@@ -60,24 +60,32 @@ window.loadCustomerDashboard = async function(){
 };
 
 // Designers & Chat
-window.renderDesigners = function(){
-  const box=$("designerList"); if(!box || typeof SHOP_CONFIG === "undefined") return;
-  box.innerHTML=SHOP_CONFIG.designers.map(d=>`
-    <div class="designer">
-      <div class="designer-info">
-        <div class="avatar">${escapeHTML(d.name[0]||"D")}</div>
-        <div><strong>${escapeHTML(d.name)}</strong><br>
-        <span class="muted">📱 ${escapeHTML(d.phone)}</span><br>
-        <span class="muted">${escapeHTML(d.speciality)}</span></div>
-      </div>
-      <button class="btn primary" style="width:auto" onclick="openChat('${d.id}')">Chat</button>
-    </div>`).join("");
+window.renderDesigners = async function(){
+  const box=$("designerList"); if(!box) return;
+  try {
+    const snap = await getDocs(collection(db, "designers"));
+    const designers = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    
+    if(!designers.length){
+      box.innerHTML = '<div class="notice">কোনো ডিজাইনার পাওয়া যায়নি।</div>';
+      return;
+    }
+
+    box.innerHTML=designers.map(d=>`
+      <div class="designer">
+        <div class="designer-info">
+          <div class="avatar">${escapeHTML(d.name[0]||"D")}</div>
+          <div><strong>${escapeHTML(d.name)}</strong><br>
+          <span class="muted">📱 ${escapeHTML(d.phone)}</span><br>
+          <span class="muted">${escapeHTML(d.speciality||"")}</span></div>
+        </div>
+        <button class="btn primary" style="width:auto" onclick="openChat('${d.id}', '${escapeHTML(d.name)}')">Chat</button>
+      </div>`).join("");
+  } catch(e) { console.error(e); }
 };
 
-window.openChat = function(id){
-  const d=SHOP_CONFIG.designers.find(x=>x.id===id);
-  if(!d)return;
-  localStorage.setItem("selectedDesigner",JSON.stringify(d));
+window.openChat = function(id, name){
+  localStorage.setItem("selectedDesigner", JSON.stringify({id, name}));
   location.href="chat.html";
 };
 
@@ -115,38 +123,6 @@ window.sendDemoMessage = async function(){
   } catch(e) { alert("Error: " + e.message); }
 };
 
-window.sendDemoFile = async function(){
-  const file=$("demoFile").files[0]; if(!file)return alert("একটি File নির্বাচন করুন।");
-  const seconds=Number($("fileDuration").value);
-  const phone = localStorage.getItem("currentCustomer");
-  
-  try {
-    const storageRef = ref(storage, `files/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    
-    await addDoc(collection(db, "files"), {
-      name: file.name,
-      url: url,
-      customerPhone: phone,
-      expiresAt: Date.now() + seconds*1000
-    });
-    alert("File Upload সফল হয়েছে।");
-    $("demoFile").value="";
-  } catch(e) { alert("Error: " + e.message); }
-};
-
-window.renderFiles = function(){
-  const phone = localStorage.getItem("currentCustomer");
-  const q = query(collection(db, "files"), where("customerPhone", "==", phone));
-  onSnapshot(q, (snapshot) => {
-    const files = snapshot.docs.map(doc => doc.data()).filter(f => f.expiresAt > Date.now());
-    const box=$("fileList"); if(!box)return;
-    if(!files.length){box.innerHTML='<div class="notice">এখন কোনো Active File নেই।</div>';return;}
-    box.innerHTML=files.map(f=>`<div class="file-row"><div><strong>📄 ${escapeHTML(f.name)}</strong><br><span class="muted">Expires: ${new Date(f.expiresAt).toLocaleString()}</span></div><a class="btn" href="${f.url}" target="_blank" download>Download</a></div>`).join("");
-  });
-};
-
 // Admin Section
 window.adminLogin = function(){
   const id = $("adminId").value.trim();
@@ -168,35 +144,75 @@ window.loadAdminDashboard = async function(){
     const custSnap = await getDocs(collection(db, "customers"));
     const customers = custSnap.docs.map(doc => doc.data());
     
+    const desSnap = await getDocs(collection(db, "designers"));
+    const designers = desSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
     if($("customerCount")) $("customerCount").textContent = customers.length;
-    if($("designerCount")) $("designerCount").textContent = typeof SHOP_CONFIG !== "undefined" ? SHOP_CONFIG.designers.length : 0;
-
-    const chatSnap = await getDocs(collection(db, "chats"));
-    if($("chatCount")) $("chatCount").textContent = chatSnap.size;
-
-    const fileSnap = await getDocs(collection(db, "files"));
-    if($("fileCount")) $("fileCount").textContent = fileSnap.size;
+    if($("designerCount")) $("designerCount").textContent = designers.length;
 
     if($("adminCustomers")){
       $("adminCustomers").innerHTML = customers.map(c => `
         <div class="file-row">
           <div>
-            <strong>${escapeHTML(c.name)}</strong><br>
-            <span class="muted">${escapeHTML(c.phone)} · ${c.vip ? "⭐ VIP" : "Non-VIP"} ${c.vipRequested ? "· VIP Requested" : ""}</span>
+            <strong>${escapeHTML(c.name)}</strong> (${escapeHTML(c.phone)})<br>
+            <span class="muted">${c.vip ? "⭐ VIP" : "Non-VIP"} ${c.vipRequested ? "· (VIP Requested)" : ""}</span>
           </div>
-          <button class="btn" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
+          <div>
+            <button class="btn" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
+            <button class="btn danger" onclick="deleteCustomer('${escapeHTML(c.phone)}')">Delete</button>
+          </div>
         </div>
-      `).join("") || '<div class="notice">No customers yet.</div>';
+      `).join("") || '<div class="notice">No customers found.</div>';
     }
-  } catch(e) {
-    console.error(e);
-  }
+
+    if($("adminDesigners")){
+      $("adminDesigners").innerHTML = designers.map(d => `
+        <div class="file-row">
+          <div>
+            <strong>${escapeHTML(d.name)}</strong> (${escapeHTML(d.phone)})<br>
+            <span class="muted">${escapeHTML(d.speciality||"")}</span>
+          </div>
+          <button class="btn danger" onclick="deleteDesigner('${d.id}')">Delete</button>
+        </div>
+      `).join("") || '<div class="notice">No designers added yet.</div>';
+    }
+  } catch(e) { console.error(e); }
+};
+
+window.addDesigner = async function(){
+  const name = $("desName").value.trim();
+  const phone = $("desPhone").value.trim();
+  const speciality = $("desSpec").value.trim();
+  
+  if(!name || !phone) return alert("নাম এবং ফোন নম্বর দিন।");
+
+  try {
+    await addDoc(collection(db, "designers"), { name, phone, speciality, createdAt: Date.now() });
+    alert("ডিজাইনার যুক্ত করা হয়েছে!");
+    $("desName").value = ""; $("desPhone").value = ""; $("desSpec").value = "";
+    window.loadAdminDashboard();
+  } catch(e) { alert("Error: " + e.message); }
+};
+
+window.deleteDesigner = async function(id){
+  if(!confirm("ডিজাইনারটি মুছতে চান?")) return;
+  try {
+    await deleteDoc(doc(db, "designers", id));
+    window.loadAdminDashboard();
+  } catch(e) { alert("Error: " + e.message); }
+};
+
+window.deleteCustomer = async function(phone){
+  if(!confirm("কাস্টমারটি মুছতে চান?")) return;
+  try {
+    await deleteDoc(doc(db, "customers", phone));
+    window.loadAdminDashboard();
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.toggleVip = async function(phone, makeVip){
   try {
     await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
-    alert("VIP Status পরিবর্তন হয়েছে!");
     window.loadAdminDashboard();
   } catch(e) { alert("Error: " + e.message); }
 };
