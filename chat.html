@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="topbar"><div><strong id="shopName">Modern Art & Press</strong><span id="chatDesigner" class="badge">DESIGNER</span></div><a href="designers.html" class="btn small">Back</a></header>
+<main class="chat-page">
+  <div id="chatMessages" class="messages"></div>
+  <div class="composer">
+    <input id="messageInput" placeholder="Message লিখুন...">
+    <button class="btn primary" onclick="sendDemoMessage()">Send</button>
+  </div>
+  <div class="card"><h3>📎 Demo File Delivery</h3><input id="demoFile" type="file"><select id="fileDuration"><option value="3600">1 Hour</option><option value="86400">24 Hours</option><option value="259200">3 Days</option></select><button class="btn" onclick="sendDemoFile()">Send File</button></div>
+</main>
+<script src="js/config.js"></script>
+<script type="module" src="js/firebase-config.js"></script><script src="js/app.js"></script><script>loadChat();</script>
+</body>
+</html>
