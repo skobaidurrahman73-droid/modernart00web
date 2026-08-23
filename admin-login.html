@@ -11,11 +11,15 @@
     <h1>👑 Admin Login</h1>
     <label>Admin ID</label><input id="adminId" placeholder="Admin ID">
     <label>Password</label><input id="adminPassword" type="password">
-    <button class="btn primary" onclick="adminLogin()">Secure Login</button>
-    <p class="muted">Demo credentials config.js-এ দেওয়া আছে। Production-এ এগুলো HTML/JS-এ রাখা যাবে না।</p>
+    <button id="adminLoginBtn" class="btn primary">Secure Login</button>
   </section>
 </main>
 <script src="config.js"></script>
-<script type="module" src="app.js"></script>
+<script type="module">
+  import "./app.js";
+  document.getElementById("adminLoginBtn").addEventListener("click", () => {
+    window.adminLogin();
+  });
+</script>
 </body>
 </html>
