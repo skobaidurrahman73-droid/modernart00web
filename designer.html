@@ -22,6 +22,13 @@
 
   <section class="card">
     <h2>👥 Active Customers</h2>
+    
+    <!-- কাস্টমার ফিল্টার বাটন -->
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button class="btn small" onclick="loadDesignerDashboard('all')">সব কাস্টমার</button>
+      <button class="btn small primary" onclick="loadDesignerDashboard('pinned')">📌 পিন করা কাস্টমার</button>
+    </div>
+
     <div id="designerCustomers"></div>
   </section>
 </main>
