@@ -124,11 +124,14 @@ export async function loadDesignerDashboard() {
       $("designerCustomers").innerHTML = customers.map(c => `
         <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd;">
           <div>
-            <strong>${escapeHTML(c.name)}</strong><br>
+            <strong>${escapeHTML(c.name)}</strong> ${c.vip ? '<span style="color:#d97706;font-weight:bold;">⭐ VIP</span>' : '<span class="muted">(NON-VIP)</span>'}<br>
             <span class="muted">📱 ${escapeHTML(c.phone)}</span>
             ${c.receiptId ? `<br><span class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</span>` : ''}
           </div>
-          <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
+          <div style="display:flex; gap:5px; align-items:center;">
+            <button class="btn small" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
+            <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
+          </div>
         </div>
       `).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>';
     }
@@ -467,7 +470,11 @@ export async function deleteCustomer(id) {
 export async function toggleVip(phone, makeVip) {
   try {
     await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
-    loadAdminDashboard();
+    if ($("adminCustomers")) {
+      loadAdminDashboard();
+    } else if ($("designerCustomers")) {
+      loadDesignerDashboard();
+    }
   } catch (e) { alert("Error: " + e.message); }
 }
 
