@@ -1,136 +1,126 @@
 import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
-import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { 
+  doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, getDocs, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { 
+  ref, uploadBytes, getDownloadURL 
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 const $ = id => document.getElementById(id);
+const escapeHTML = str => String(str ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
 
-function applyBranding(){
-  if(typeof SHOP_CONFIG !== "undefined"){
-    document.querySelectorAll("#shopName").forEach(x=>x.textContent=SHOP_CONFIG.shopName);
-    const link=$("emergencyLink");
-    if(link){ link.textContent=SHOP_CONFIG.emergencyNumber; link.href="tel:"+SHOP_CONFIG.emergencyNumber; }
+// Branding
+function applyBranding() {
+  if (typeof SHOP_CONFIG !== "undefined") {
+    document.querySelectorAll("#shopName").forEach(x => x.textContent = SHOP_CONFIG.shopName);
+    const link = $("emergencyLink");
+    if (link) { link.textContent = SHOP_CONFIG.emergencyNumber; link.href = "tel:" + SHOP_CONFIG.emergencyNumber; }
   }
 }
 document.addEventListener("DOMContentLoaded", applyBranding);
 
 // Customer Auth
-export async function customerLogin(){
-  const phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
-  if(!phone) return alert("ফোন নম্বর দিন।");
-  
+export async function customerLogin() {
+  const phone = $("phone").value.trim(), receipt = $("receiptId") ? $("receiptId").value.trim() : "";
+  if (!phone) return alert("ফোন নম্বর দিন।");
   try {
     const snap = await getDoc(doc(db, "customers", phone));
-    if(!snap.exists()){
-      location.href=`register.html?phone=${encodeURIComponent(phone)}&receipt=${encodeURIComponent(receipt)}`;
+    if (!snap.exists()) {
+      location.href = `register.html?phone=${encodeURIComponent(phone)}&receipt=${encodeURIComponent(receipt)}`;
       return;
     }
     localStorage.setItem("currentCustomer", phone);
-    location.href="customer.html";
-  } catch(e) { alert("Error: " + e.message); }
+    location.href = "customer.html";
+  } catch (e) { alert("Error: " + e.message); }
 }
 window.customerLogin = customerLogin;
 
-export async function registerCustomer(){
-  const name=$("name").value.trim(), phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
-  if(!name||!phone) return alert("সব তথ্য পূরণ করুন।");
-  
+export async function registerCustomer() {
+  const name = $("name").value.trim(), phone = $("phone").value.trim(), receipt = $("receiptId") ? $("receiptId").value.trim() : "";
+  if (!name || !phone) return alert("সব তথ্য পূরণ করুন।");
   try {
     await ensureFirebaseUser();
     await setDoc(doc(db, "customers", phone), {
       name, phone, receiptId: receipt, vip: false,
-      vipRequested: $("vipRequest")?$("vipRequest").checked:false, createdAt: Date.now()
+      vipRequested: $("vipRequest") ? $("vipRequest").checked : false, createdAt: Date.now()
     });
     localStorage.setItem("currentCustomer", phone);
     alert("Account তৈরি হয়েছে।");
-    location.href="customer.html";
-  } catch(e) { alert("Error: " + e.message); }
+    location.href = "customer.html";
+  } catch (e) { alert("Error: " + e.message); }
 }
 window.registerCustomer = registerCustomer;
 
-export async function loadCustomerDashboard(){
+export async function loadCustomerDashboard() {
   const phone = localStorage.getItem("currentCustomer");
-  if(!phone){ location.href="index.html"; return; }
-  
+  if (!phone) { location.href = "index.html"; return; }
   try {
     const snap = await getDoc(doc(db, "customers", phone));
-    if(!snap.exists()){ location.href="index.html"; return; }
+    if (!snap.exists()) { location.href = "index.html"; return; }
     const c = snap.data();
-    if($("customerName")) $("customerName").textContent=c.name;
-    if($("customerPhone")) $("customerPhone").textContent=c.phone;
-    if($("vipStatus")) $("vipStatus").textContent=c.vip ? "⭐ VIP" : "NON-VIP";
-  } catch(e) { console.error(e); }
+    if ($("customerName")) $("customerName").textContent = c.name;
+    if ($("customerPhone")) $("customerPhone").textContent = c.phone;
+    if ($("vipStatus")) $("vipStatus").textContent = c.vip ? "⭐ VIP" : "NON-VIP";
+  } catch (e) { console.error(e); }
 }
 window.loadCustomerDashboard = loadCustomerDashboard;
 
-// Designers List for Customer
-export async function renderDesigners(){
-  const box=$("designerList"); if(!box) return;
+// Customer Chat & Designer List
+export async function renderDesigners() {
+  const box = $("designerList"); if (!box) return;
   try {
     const snap = await getDocs(collection(db, "designers"));
-    const designers = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-    
-    if(!designers.length){
+    const designers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!designers.length) {
       box.innerHTML = '<div class="notice">কোনো ডিজাইনার পাওয়া যায়নি।</div>';
       return;
     }
-
-    box.innerHTML=designers.map(d=>`
+    box.innerHTML = designers.map(d => `
       <div class="designer" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd;">
-        <div><strong>${escapeHTML(d.name)}</strong><br><span class="muted">📱 ${escapeHTML(d.phone)}</span><br><span class="muted">${escapeHTML(d.speciality||"")}</span></div>
+        <div><strong>${escapeHTML(d.name)}</strong><br><span class="muted">📱 ${escapeHTML(d.phone)}</span><br><span class="muted">${escapeHTML(d.speciality || "")}</span></div>
         <button class="btn primary" style="width:auto" onclick="openChatAsCustomer('${d.id}', '${escapeHTML(d.name)}')">Chat</button>
       </div>`).join("");
-  } catch(e) { console.error(e); }
+  } catch (e) { console.error(e); }
 }
 window.renderDesigners = renderDesigners;
 
-export function openChatAsCustomer(id, name){
-  localStorage.setItem("selectedDesigner", JSON.stringify({id, name}));
+export function openChatAsCustomer(id, name) {
+  localStorage.setItem("selectedDesigner", JSON.stringify({ id, name }));
   localStorage.removeItem("activeChatCustomer");
-  location.href="chat.html";
+  location.href = "chat.html";
 }
 window.openChatAsCustomer = openChatAsCustomer;
 
 // Designer Auth & Dashboard
-export async function designerLogin(){
+export async function designerLogin() {
   const phone = $("designerPhone").value.trim();
-  if(!phone) return alert("ফোন নম্বর দিন।");
-
+  if (!phone) return alert("ফোন নম্বর দিন।");
   try {
     await ensureFirebaseUser();
     const q = query(collection(db, "designers"), where("phone", "==", phone));
     const snap = await getDocs(q);
-    
-    if(snap.empty){
-      return alert("এই নম্বরে কোনো ডিজাইনার অ্যাকাউন্ট পাওয়া যায়নি।");
-    }
-    
+    if (snap.empty) return alert("এই নম্বরে কোনো ডিজাইনার অ্যাকাউন্ট পাওয়া যায়নি।");
     const docSnap = snap.docs[0];
     const designer = { id: docSnap.id, ...docSnap.data() };
     localStorage.setItem("currentDesigner", JSON.stringify(designer));
     localStorage.removeItem("currentCustomer");
     alert("লগইন সফল হয়েছে!");
     location.href = "designer.html";
-  } catch(e) { 
-    alert("Error: " + e.message); 
-  }
+  } catch (e) { alert("Error: " + e.message); }
 }
 window.designerLogin = designerLogin;
 
-export async function loadDesignerDashboard(){
+export async function loadDesignerDashboard() {
   const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
-  if(!designer){ 
-    location.href = "designer-login.html"; 
-    return; 
-  }
-
-  if($("designerName")) $("designerName").textContent = designer.name;
-  if($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
+  if (!designer) { location.href = "designer-login.html"; return; }
+  if ($("designerName")) $("designerName").textContent = designer.name;
+  if ($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
 
   try {
     const custSnap = await getDocs(collection(db, "customers"));
     const customers = custSnap.docs.map(doc => doc.data());
-
-    if($("designerCustomers")){
+    if ($("designerCustomers")) {
       $("designerCustomers").innerHTML = customers.map(c => `
         <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd;">
           <div>
@@ -141,26 +131,25 @@ export async function loadDesignerDashboard(){
         </div>
       `).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>';
     }
-  } catch(e) { console.error(e); }
+  } catch (e) { console.error(e); }
 }
 window.loadDesignerDashboard = loadDesignerDashboard;
 
-export function openChatAsDesigner(phone, name){
+export function openChatAsDesigner(phone, name) {
   localStorage.setItem("activeChatCustomer", JSON.stringify({ phone, name }));
   localStorage.removeItem("selectedDesigner");
   location.href = "chat.html";
 }
 window.openChatAsDesigner = openChatAsDesigner;
 
-// Chat & File Handling
-export function loadChat(){
+// General Chat & File Sending
+export function loadChat() {
   const customerPhone = localStorage.getItem("currentCustomer");
   const selectedDesigner = JSON.parse(localStorage.getItem("selectedDesigner") || "null");
   const currentDesigner = JSON.parse(localStorage.getItem("currentDesigner") || "null");
   const activeCustomer = JSON.parse(localStorage.getItem("activeChatCustomer") || "null");
 
   let chatId, displayName;
-
   if (customerPhone && selectedDesigner) {
     chatId = `${customerPhone}_${selectedDesigner.id}`;
     displayName = selectedDesigner.name;
@@ -173,48 +162,42 @@ export function loadChat(){
     return;
   }
 
-  if($("chatDesigner")) $("chatDesigner").textContent = displayName;
+  if ($("chatDesigner")) $("chatDesigner").textContent = displayName;
 
   const q = query(collection(db, "chats"), where("chatId", "==", chatId));
-
   onSnapshot(q, (snapshot) => {
     const msgs = snapshot.docs.map(doc => doc.data());
     msgs.sort((a, b) => (a.at || 0) - (b.at || 0));
     renderMessages(msgs);
-  }, (error) => {
-    console.error("Firestore Error:", error);
-  });
+  }, (error) => { console.error("Firestore Error:", error); });
 }
 window.loadChat = loadChat;
 
-function renderMessages(msgs){
+function renderMessages(msgs) {
   const box = $("chatMessages");
-  if(!box) return;
+  if (!box) return;
   const isCustomerLoggedIn = !!localStorage.getItem("currentCustomer");
 
   box.innerHTML = msgs.map(m => {
     const isMe = isCustomerLoggedIn ? (m.from === "customer") : (m.from === "designer");
-    let content = escapeHTML(m.text);
+    let content = escapeHTML(m.text || "");
 
-    if(m.fileUrl){
-      // ফাইলটি ছবি কিনা তা যাচাই করা
+    if (m.fileUrl) {
       const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName || m.fileUrl);
-
-      if(isImage){
+      if (isImage) {
         content = `<img src="${m.fileUrl}" alt="Image" style="max-width: 100%; max-height: 220px; border-radius: 10px; display: block; margin-top: 5px; cursor: pointer;" onclick="window.open('${m.fileUrl}', '_blank')">`;
       } else {
         content = `📄 ${escapeHTML(m.fileName || 'File')}<br><a href="${m.fileUrl}" target="_blank" download style="color: #0084ff; font-weight: bold; display: inline-block; margin-top: 5px; text-decoration: underline;">📥 ডাউনলোড করুন</a>`;
       }
     }
-
     return `<div class="message ${isMe ? "me" : ""}">${content}</div>`;
   }).join("");
   box.scrollTop = box.scrollHeight;
 }
 
-export async function sendDemoMessage(){
-  const input = $("messageInput"), text = input ? input.value.trim() : ""; 
-  if(!text) return;
+export async function sendDemoMessage() {
+  const input = $("messageInput"), text = input ? input.value.trim() : "";
+  if (!text) return;
 
   const customerPhone = localStorage.getItem("currentCustomer");
   const selectedDesigner = JSON.parse(localStorage.getItem("selectedDesigner") || "null");
@@ -233,20 +216,15 @@ export async function sendDemoMessage(){
   }
 
   try {
-    await addDoc(collection(db, "chats"), {
-      chatId: chatId,
-      from: sender,
-      text: text,
-      at: Date.now()
-    });
-    if(input) input.value = "";
-  } catch(e) { alert("Error: " + e.message); }
+    await addDoc(collection(db, "chats"), { chatId, from: sender, text, at: Date.now() });
+    if (input) input.value = "";
+  } catch (e) { alert("Error: " + e.message); }
 }
 window.sendDemoMessage = sendDemoMessage;
 
-export async function sendDemoFile(){
+export async function sendDemoFile() {
   const fileInput = $("demoFile");
-  if(!fileInput || !fileInput.files[0]) return alert("দয়া করে একটি ফাইল সিলেক্ট করুন।");
+  if (!fileInput || !fileInput.files[0]) return alert("দয়া করে একটি ফাইল সিলেক্ট করুন।");
   const file = fileInput.files[0];
 
   const customerPhone = localStorage.getItem("currentCustomer");
@@ -272,28 +250,21 @@ export async function sendDemoFile(){
     const fileUrl = await getDownloadURL(storageRef);
 
     await addDoc(collection(db, "chats"), {
-      chatId: chatId,
-      from: sender,
-      text: `📁 ফাইল প্রেরিত হয়েছে: ${file.name}`,
-      fileUrl: fileUrl,
-      fileName: file.name,
-      at: Date.now()
+      chatId, from: sender, text: `📁 ফাইল প্রেরিত হয়েছে: ${file.name}`, fileUrl, fileName: file.name, at: Date.now()
     });
 
     fileInput.value = "";
     alert("ফাইল সফলভাবে পাঠানো হয়েছে!");
-  } catch(e) { 
-    alert("ফাইল আপলোড ব্যর্থ হয়েছে: " + e.message); 
-  }
+  } catch (e) { alert("ফাইল আপলোড ব্যর্থ হয়েছে: " + e.message); }
 }
 window.sendDemoFile = sendDemoFile;
 
-// Admin Section
-export function adminLogin(){
+// Admin Auth & Login
+export function adminLogin() {
   const id = $("adminId").value.trim();
   const pass = $("adminPassword").value;
-  if(typeof SHOP_CONFIG !== "undefined" && id === SHOP_CONFIG.demoAdmin.id && pass === SHOP_CONFIG.demoAdmin.password){
-    localStorage.setItem("adminLoggedIn","true");
+  if (typeof SHOP_CONFIG !== "undefined" && id === SHOP_CONFIG.demoAdmin.id && pass === SHOP_CONFIG.demoAdmin.password) {
+    localStorage.setItem("adminLoggedIn", "true");
     location.href = "admin.html";
   } else {
     alert("Admin ID বা Password ভুল।");
@@ -301,129 +272,7 @@ export function adminLogin(){
 }
 window.adminLogin = adminLogin;
 
-export async function loadAdminDashboard(){
-  if(localStorage.getItem("adminLoggedIn") !== "true"){
-    location.href = "admin-login.html";
-    return;
-  }
-  try {
-    const custSnap = await getDocs(collection(db, "customers"));
-    const customers = custSnap.docs.map(doc => doc.data());
-    
-    const desSnap = await getDocs(collection(db, "designers"));
-    const designers = desSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-
-    if($("customerCount")) $("customerCount").textContent = customers.length;
-    if($("designerCount")) $("designerCount").textContent = designers.length;
-
-    if($("adminCustomers")){
-      $("adminCustomers").innerHTML = customers.map(c => `
-        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-          <div><strong>${escapeHTML(c.name)}</strong> (${escapeHTML(c.phone)})</div>
-          <div>
-            <button class="btn" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
-            <button class="btn danger" onclick="deleteCustomer('${escapeHTML(c.phone)}')">Delete</button>
-          </div>
-        </div>
-      `).join("") || '<div class="notice">No customers found.</div>';
-    }
-
-    if($("adminDesigners")){
-      $("adminDesigners").innerHTML = designers.map(d => `
-        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-          <div><strong>${escapeHTML(d.name)}</strong> (${escapeHTML(d.phone)})<br><span class="muted">${escapeHTML(d.speciality||"")}</span></div>
-          <button class="btn danger" onclick="deleteDesigner('${d.id}')">Delete</button>
-        </div>
-      `).join("") || '<div class="notice">No designers added yet.</div>';
-    }
-  } catch(e) { console.error(e); }
-}
-window.loadAdminDashboard = loadAdminDashboard;
-
-export async function addDesigner(){
-  const name = $("desName").value.trim();
-  const phone = $("desPhone").value.trim();
-  const speciality = $("desSpec").value.trim();
-
-  if(!name || !phone) return alert("নাম এবং ফোন নম্বর দিন।");
-
-  try {
-    await ensureFirebaseUser();
-    await addDoc(collection(db, "designers"), { 
-      name, 
-      phone, 
-      speciality, 
-      createdAt: Date.now() 
-    });
-    alert("ডিজাইনার যুক্ত করা হয়েছে!");
-    $("desName").value = ""; $("desPhone").value = ""; $("desSpec").value = "";
-    window.loadAdminDashboard();
-  } catch(e) { alert("Error: " + e.message); }
-}
-window.addDesigner = addDesigner;
-
-export async function deleteDesigner(id){
-  if(!confirm("ডিজাইনারটি মুছতে চান?")) return;
-  try {
-    await deleteDoc(doc(db, "designers", id));
-    window.loadAdminDashboard();
-  } catch(e) { alert("Error: " + e.message); }
-}
-window.deleteDesigner = deleteDesigner;
-
-export async function deleteCustomer(phone){
-  if(!confirm("কাস্টমারটি মুছতে চান?")) return;
-  try {
-    await deleteDoc(doc(db, "customers", phone));
-    window.loadAdminDashboard();
-  } catch(e) { alert("Error: " + e.message); }
-}
-window.deleteCustomer = deleteCustomer;
-
-export async function toggleVip(phone, makeVip){
-  try {
-    await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
-    window.loadAdminDashboard();
-  } catch(e) { alert("Error: " + e.message); }
-}
-window.toggleVip = toggleVip;
-
-export function logout(){
-  localStorage.clear();
-  location.href="index.html";
-}
-window.logout = logout;
-
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    // ফায়ারবেস ইউজার থাকলে ফোন নম্বর সেট করে নিবে
-    if (user.phoneNumber) {
-      localStorage.setItem("currentCustomer", user.phoneNumber.replace("+88", ""));
-    }
-  }
-});
-
-export async function clearOldData() {
-  if(!confirm("৩০ দিনের বেশি পুরনো সব চ্যাট মুছে ফেলতে চান?")) return;
-  
-  try {
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const q = query(collection(db, "chats"), where("at", "<", thirtyDaysAgo));
-    const snap = await getDocs(q);
-    
-    const deletePromises = snap.docs.map(d => deleteDoc(d.ref));
-    await Promise.all(deletePromises);
-    
-    alert("পুরানো ডাটা সফলভাবে মুছে ফেলা হয়েছে!");
-  } catch(e) { 
-    alert("Error: " + e.message); 
-  }
-}
-window.clearOldData = clearOldData;
-
-// Admin Dashboard Loader (Real-time Stats & Lists)
+// Admin Dashboard & Management
 export async function loadAdminDashboard() {
   if (localStorage.getItem("adminLoggedIn") !== "true") {
     location.href = "admin-login.html";
@@ -431,19 +280,20 @@ export async function loadAdminDashboard() {
   }
 
   try {
-    // 1. Customers
+    // 1. Load Customers
     const custSnap = await getDocs(collection(db, "customers"));
     const customers = custSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     if ($("customerCount")) $("customerCount").textContent = customers.length;
 
     if ($("adminCustomers")) {
       $("adminCustomers").innerHTML = customers.map(c => `
-        <div class="file-row">
+        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
           <div>
             <strong>${escapeHTML(c.name)}</strong> (${escapeHTML(c.phone)})
             ${c.banned ? '<span style="color:red;font-weight:bold;"> [BANNED]</span>' : ''}
           </div>
           <div>
+            <button class="btn small" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
             <button class="btn small" onclick="editUser('customers', '${c.id}')">✏️ Edit</button>
             <button class="btn small ${c.banned ? '' : 'danger'}" onclick="toggleBanUser('customers', '${c.id}', ${!!c.banned})">${c.banned ? 'Unban' : 'Ban'}</button>
             <button class="btn danger small" onclick="deleteCustomer('${c.id}')">Delete</button>
@@ -452,16 +302,16 @@ export async function loadAdminDashboard() {
       `).join("") || '<div class="notice">No customers found.</div>';
     }
 
-    // 2. Designers
+    // 2. Load Designers
     const desSnap = await getDocs(collection(db, "designers"));
     const designers = desSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     if ($("designerCount")) $("designerCount").textContent = designers.length;
 
     if ($("adminDesigners")) {
       $("adminDesigners").innerHTML = designers.map(d => `
-        <div class="file-row">
+        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
           <div style="display:flex;align-items:center;gap:10px;">
-            ${d.image ? `<img src="${d.image}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : ''}
+            ${d.image ? `<img src="${d.image}" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">` : ''}
             <div>
               <strong>${escapeHTML(d.name)}</strong> (${escapeHTML(d.phone)})<br>
               <span class="muted">${escapeHTML(d.speciality || '')}</span>
@@ -477,14 +327,13 @@ export async function loadAdminDashboard() {
       `).join("") || '<div class="notice">No designers found.</div>';
     }
 
-    // 3. Total Chats & Chat Selector
+    // 3. Load Chat Count & Selector Options
     const chatSnap = await getDocs(collection(db, "chats"));
     if ($("totalChatsCount")) $("totalChatsCount").textContent = chatSnap.size;
 
     const chatIds = [...new Set(chatSnap.docs.map(doc => doc.data().chatId).filter(Boolean))];
-    const selector = $("chatSelector");
-    if (selector) {
-      selector.innerHTML = '<option value="">-- চ্যাট বেছে নিন --</option>' + 
+    if ($("chatSelector")) {
+      $("chatSelector").innerHTML = '<option value="">-- চ্যাট বেছে নিন --</option>' +
         chatIds.map(id => `<option value="${id}">Chat ID: ${id}</option>`).join("");
     }
 
@@ -492,7 +341,7 @@ export async function loadAdminDashboard() {
 }
 window.loadAdminDashboard = loadAdminDashboard;
 
-// Live Chat Viewer for Admin
+// Admin Chat Real-time Viewer
 let currentAdminChatUnsub = null;
 export function loadSelectedChatHistory() {
   const chatId = $("chatSelector").value;
@@ -503,11 +352,12 @@ export function loadSelectedChatHistory() {
 
   const q = query(collection(db, "chats"), where("chatId", "==", chatId));
   currentAdminChatUnsub = onSnapshot(q, (snapshot) => {
-    const msgs = snapshot.docs.map(doc => doc.data()).sort((a,b) => (a.at||0)-(b.at||0));
+    const msgs = snapshot.docs.map(doc => doc.data()).sort((a, b) => (a.at || 0) - (b.at || 0));
     box.innerHTML = msgs.map(m => `
       <div class="message ${m.from === 'admin' ? 'me' : ''}" style="margin:4px 0;padding:6px 10px;border-radius:6px;background:${m.from==='admin'?'#0084ff':(m.from==='designer'?'#e4e6eb':'#dcf8c6')};color:${m.from==='admin'?'#fff':'#000'};width:fit-content;max-width:80%;${m.from==='admin'?'margin-left:auto;':''}">
         <small style="display:block;font-size:10px;opacity:0.8;">[${m.from.toUpperCase()}]</small>
-        ${escapeHTML(m.text)}
+        ${m.fileUrl ? `<a href="${m.fileUrl}" target="_blank" style="color:inherit;font-weight:bold;">📎 ${escapeHTML(m.fileName || 'File')}</a><br>` : ''}
+        ${escapeHTML(m.text || '')}
       </div>
     `).join("");
     box.scrollTop = box.scrollHeight;
@@ -515,7 +365,7 @@ export function loadSelectedChatHistory() {
 }
 window.loadSelectedChatHistory = loadSelectedChatHistory;
 
-// Send Admin Reply to Chat
+// Admin Chat Reply (Text & File)
 export async function sendAdminReply() {
   const chatId = $("chatSelector").value;
   const input = $("adminReplyInput");
@@ -525,15 +375,37 @@ export async function sendAdminReply() {
   if (!text) return;
 
   try {
-    await addDoc(collection(db, "chats"), {
-      chatId, from: "admin", text, at: Date.now()
-    });
+    await addDoc(collection(db, "chats"), { chatId, from: "admin", text, at: Date.now() });
     input.value = "";
   } catch (e) { alert("Error: " + e.message); }
 }
 window.sendAdminReply = sendAdminReply;
 
-// Delete Entire Selected Chat History
+export async function sendAdminFile() {
+  const chatId = $("chatSelector").value;
+  const fileInput = $("adminFile");
+  const file = fileInput ? fileInput.files[0] : null;
+
+  if (!chatId) return alert("দয়া করে একটি চ্যাট সিলেক্ট করুন।");
+  if (!file) return;
+
+  try {
+    alert("ফাইল আপলোড হচ্ছে, অপেক্ষা করুন...");
+    const storageRef = ref(storage, `chats/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    const fileUrl = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, "chats"), {
+      chatId, from: "admin", text: `📁 ফাইল: ${file.name}`, fileUrl, fileName: file.name, at: Date.now()
+    });
+
+    fileInput.value = "";
+    alert("ফাইল সফলভাবে পাঠানো হয়েছে!");
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.sendAdminFile = sendAdminFile;
+
+// Admin Data Controls
 export async function deleteSelectedChatHistory() {
   const chatId = $("chatSelector").value;
   if (!chatId) return alert("চ্যাট সিলেক্ট করুন।");
@@ -550,7 +422,51 @@ export async function deleteSelectedChatHistory() {
 }
 window.deleteSelectedChatHistory = deleteSelectedChatHistory;
 
-// User Ban / Unban
+export async function addDesigner() {
+  const name = $("desName").value.trim();
+  const phone = $("desPhone").value.trim();
+  const speciality = $("desSpec").value.trim();
+  const image = $("desImage") ? $("desImage").value.trim() : "";
+
+  if (!name || !phone) return alert("নাম এবং ফোন নম্বর দিন।");
+
+  try {
+    await ensureFirebaseUser();
+    await addDoc(collection(db, "designers"), { name, phone, speciality, image, createdAt: Date.now() });
+    alert("ডিজাইনার যুক্ত করা হয়েছে!");
+    $("desName").value = ""; $("desPhone").value = ""; $("desSpec").value = "";
+    if ($("desImage")) $("desImage").value = "";
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.addDesigner = addDesigner;
+
+export async function deleteDesigner(id) {
+  if (!confirm("ডিজাইনারটি মুছতে চান?")) return;
+  try {
+    await deleteDoc(doc(db, "designers", id));
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.deleteDesigner = deleteDesigner;
+
+export async function deleteCustomer(id) {
+  if (!confirm("কাস্টমারটি মুছতে চান?")) return;
+  try {
+    await deleteDoc(doc(db, "customers", id));
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.deleteCustomer = deleteCustomer;
+
+export async function toggleVip(phone, makeVip) {
+  try {
+    await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.toggleVip = toggleVip;
+
 export async function toggleBanUser(coll, id, currentBanState) {
   try {
     await setDoc(doc(db, coll, id), { banned: !currentBanState }, { merge: true });
@@ -560,7 +476,6 @@ export async function toggleBanUser(coll, id, currentBanState) {
 }
 window.toggleBanUser = toggleBanUser;
 
-// Edit User Info
 export async function editUser(coll, id) {
   const newName = prompt("নতুন নাম দিন:");
   const newPhone = prompt("নতুন ফোন নম্বর দিন:");
@@ -574,7 +489,6 @@ export async function editUser(coll, id) {
 }
 window.editUser = editUser;
 
-// Send Global / Targeted Notice
 export async function sendNotice() {
   const target = $("noticeTarget").value;
   const text = $("noticeText").value.trim();
@@ -588,7 +502,6 @@ export async function sendNotice() {
 }
 window.sendNotice = sendNotice;
 
-// Update Site Logo & Theme
 export async function updateSiteLogo() {
   const logo = $("siteLogoUrl").value.trim();
   if (!logo) return;
@@ -605,4 +518,28 @@ export async function updateThemeColor() {
 }
 window.updateThemeColor = updateThemeColor;
 
-function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
+export async function clearOldData() {
+  if (!confirm("৩০ দিনের বেশি পুরনো সব চ্যাট মুছে ফেলতে চান?")) return;
+  try {
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const q = query(collection(db, "chats"), where("at", "<", thirtyDaysAgo));
+    const snap = await getDocs(q);
+    const deletePromises = snap.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+    alert("পুরানো ডাটা সফলভাবে মুছে ফেলা হয়েছে!");
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.clearOldData = clearOldData;
+
+export function logout() {
+  localStorage.clear();
+  location.href = "index.html";
+}
+window.logout = logout;
+
+// Auth Observer
+onAuthStateChanged(auth, (user) => {
+  if (user && user.phoneNumber) {
+    localStorage.setItem("currentCustomer", user.phoneNumber.replace("+88", ""));
+  }
+});
