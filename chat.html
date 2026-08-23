@@ -25,10 +25,9 @@
     <!-- মেসেজ দেখানোর বক্স -->
     <div id="chatMessages" class="chat-messages"></div>
 
-    <!-- মেসেজ ও ফাইল ইনপুট -->
+    <!-- মেসেজ ও ড্রাইভ ইনপুট -->
     <div class="chat-footer">
-      <label for="demoFile" class="file-btn">📎</label>
-      <input type="file" id="demoFile" style="display:none" onchange="window.sendDemoFile()">
+      <a id="driveBtn" class="file-btn" target="_blank" style="text-decoration:none; cursor:pointer;">📎</a>
       <input type="text" id="messageInput" placeholder="মেসেজ লিখুন..." onkeypress="if(event.key==='Enter') window.sendDemoMessage()">
       <button type="button" onclick="window.sendDemoMessage()">➤</button>
     </div>
@@ -38,10 +37,9 @@
 <script src="config.js"></script>
 <script type="module" src="app.js"></script>
 <script type="module">
-  import { loadChat, sendDemoMessage, sendDemoFile } from './app.js';
+  import { loadChat, sendDemoMessage } from './app.js';
 
   window.sendDemoMessage = sendDemoMessage;
-  window.sendDemoFile = sendDemoFile;
 
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof loadChat === "function") {
