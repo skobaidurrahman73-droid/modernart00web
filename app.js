@@ -95,22 +95,68 @@ window.openChatAsCustomer = openChatAsCustomer;
 // Designer Auth & Dashboard
 export async function designerLogin() {
   const phone = $("designerPhone").value.trim();
+  const driveUrl = $("designerDriveUrl") ? $("designerDriveUrl").value.trim() : "";
   if (!phone) return alert("ফোন নম্বর দিন।");
+  
   try {
     await ensureFirebaseUser();
     const q = query(collection(db, "designers"), where("phone", "==", phone));
     const snap = await getDocs(q);
-    if (snap.empty) return alert("এই নম্বরে কোনো ডিজাইনার অ্যাকাউন্ট পাওয়া যায়নি।");
+    if (snap.empty) return alert("অ্যাকাউন্ট পাওয়া যায়নি।");
+
     const docSnap = snap.docs[0];
-    const designer = { id: docSnap.id, ...docSnap.data() };
+    if (driveUrl) {
+      await setDoc(doc(db, "designers", docSnap.id), { driveUrl }, { merge: true });
+    }
+    
+    const updatedSnap = await getDoc(doc(db, "designers", docSnap.id));
+    const designer = { id: docSnap.id, ...updatedSnap.data() };
     localStorage.setItem("currentDesigner", JSON.stringify(designer));
-    localStorage.removeItem("currentCustomer");
-    alert("লগইন সফল হয়েছে!");
     location.href = "designer.html";
   } catch (e) { alert("Error: " + e.message); }
 }
 window.designerLogin = designerLogin;
 
+export async function loadChat() {
+  const customerPhone = localStorage.getItem("currentCustomer");
+  const selectedDesigner = JSON.parse(localStorage.getItem("selectedDesigner") || "null");
+  const currentDesigner = JSON.parse(localStorage.getItem("currentDesigner") || "null");
+  const activeCustomer = JSON.parse(localStorage.getItem("activeChatCustomer") || "null");
+
+  let chatId, displayName, driveUrl = "";
+
+  if (customerPhone && selectedDesigner) {
+    chatId = `${customerPhone}_${selectedDesigner.id}`;
+    displayName = selectedDesigner.name;
+    const desSnap = await getDoc(doc(db, "designers", selectedDesigner.id));
+    if (desSnap.exists()) driveUrl = desSnap.data().driveUrl || "";
+  } else if (currentDesigner && activeCustomer) {
+    chatId = `${activeCustomer.phone}_${currentDesigner.id}`;
+    displayName = activeCustomer.name;
+    driveUrl = currentDesigner.driveUrl || "";
+  } else {
+    alert("চ্যাট তথ্য পাওয়া যায়নি।");
+    location.href = "index.html";
+    return;
+  }
+
+  if ($("chatDesigner")) {
+    $("chatDesigner").innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <span>${displayName}</span>
+        ${driveUrl ? `<a href="${driveUrl}" target="_blank" class="btn small" style="background:#0f9d58; color:#fff; padding:6px 12px; border-radius:8px; text-decoration:none;">📁 Drive Folder</a>` : ''}
+      </div>
+    `;
+  }
+
+  const q = query(collection(db, "chats"), where("chatId", "==", chatId));
+  onSnapshot(q, (snapshot) => {
+    const msgs = snapshot.docs.map(doc => doc.data());
+    msgs.sort((a, b) => (a.at || 0) - (b.at || 0));
+    renderMessages(msgs);
+  });
+}
+window.loadChat = loadChat;
 export async function loadDesignerDashboard() {
   const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
   if (!designer) { location.href = "designer-login.html"; return; }
