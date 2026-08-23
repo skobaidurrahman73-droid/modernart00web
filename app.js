@@ -222,4 +222,10 @@ window.logout = function(){
   location.href="index.html";
 };
 
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("addDesignerBtn");
+  if (btn) {
+    btn.addEventListener("click", () => window.addDesigner());
+  }
+});
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
