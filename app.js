@@ -1,5 +1,5 @@
 import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
-import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const $ = id => document.getElementById(id);
@@ -14,7 +14,7 @@ function applyBranding(){
 document.addEventListener("DOMContentLoaded", applyBranding);
 
 // Customer Auth
-window.customerLogin = async function(){
+export async function customerLogin(){
   const phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
   if(!phone) return alert("ফোন নম্বর দিন।");
   
@@ -27,9 +27,10 @@ window.customerLogin = async function(){
     localStorage.setItem("currentCustomer", phone);
     location.href="customer.html";
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.customerLogin = customerLogin;
 
-window.registerCustomer = async function(){
+export async function registerCustomer(){
   const name=$("name").value.trim(), phone=$("phone").value.trim(), receipt=$("receiptId")?$("receiptId").value.trim():"";
   if(!name||!phone) return alert("সব তথ্য পূরণ করুন।");
   
@@ -43,9 +44,10 @@ window.registerCustomer = async function(){
     alert("Account তৈরি হয়েছে।");
     location.href="customer.html";
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.registerCustomer = registerCustomer;
 
-window.loadCustomerDashboard = async function(){
+export async function loadCustomerDashboard(){
   const phone = localStorage.getItem("currentCustomer");
   if(!phone){ location.href="index.html"; return; }
   
@@ -57,10 +59,11 @@ window.loadCustomerDashboard = async function(){
     if($("customerPhone")) $("customerPhone").textContent=c.phone;
     if($("vipStatus")) $("vipStatus").textContent=c.vip ? "⭐ VIP" : "NON-VIP";
   } catch(e) { console.error(e); }
-};
+}
+window.loadCustomerDashboard = loadCustomerDashboard;
 
 // Designers List for Customer
-window.renderDesigners = async function(){
+export async function renderDesigners(){
   const box=$("designerList"); if(!box) return;
   try {
     const snap = await getDocs(collection(db, "designers"));
@@ -77,16 +80,18 @@ window.renderDesigners = async function(){
         <button class="btn primary" style="width:auto" onclick="openChatAsCustomer('${d.id}', '${escapeHTML(d.name)}')">Chat</button>
       </div>`).join("");
   } catch(e) { console.error(e); }
-};
+}
+window.renderDesigners = renderDesigners;
 
-window.openChatAsCustomer = function(id, name){
+export function openChatAsCustomer(id, name){
   localStorage.setItem("selectedDesigner", JSON.stringify({id, name}));
   localStorage.removeItem("activeChatCustomer");
   location.href="chat.html";
-};
+}
+window.openChatAsCustomer = openChatAsCustomer;
 
 // Designer Auth & Dashboard
-window.designerLogin = async function(){
+export async function designerLogin(){
   const phone = $("designerPhone").value.trim();
   if(!phone) return alert("ফোন নম্বর দিন।");
 
@@ -108,9 +113,10 @@ window.designerLogin = async function(){
   } catch(e) { 
     alert("Error: " + e.message); 
   }
-};
+}
+window.designerLogin = designerLogin;
 
-window.loadDesignerDashboard = async function(){
+export async function loadDesignerDashboard(){
   const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
   if(!designer){ 
     location.href = "designer-login.html"; 
@@ -136,16 +142,18 @@ window.loadDesignerDashboard = async function(){
       `).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>';
     }
   } catch(e) { console.error(e); }
-};
+}
+window.loadDesignerDashboard = loadDesignerDashboard;
 
-window.openChatAsDesigner = function(phone, name){
+export function openChatAsDesigner(phone, name){
   localStorage.setItem("activeChatCustomer", JSON.stringify({ phone, name }));
   localStorage.removeItem("selectedDesigner");
   location.href = "chat.html";
-};
+}
+window.openChatAsDesigner = openChatAsDesigner;
 
 // Chat & File Handling
-window.loadChat = function(){
+export function loadChat(){
   const customerPhone = localStorage.getItem("currentCustomer");
   const selectedDesigner = JSON.parse(localStorage.getItem("selectedDesigner") || "null");
   const currentDesigner = JSON.parse(localStorage.getItem("currentDesigner") || "null");
@@ -167,12 +175,17 @@ window.loadChat = function(){
 
   if($("chatDesigner")) $("chatDesigner").textContent = displayName;
 
-  const q = query(collection(db, "chats"), where("chatId", "==", chatId), orderBy("at", "asc"));
+  const q = query(collection(db, "chats"), where("chatId", "==", chatId));
+
   onSnapshot(q, (snapshot) => {
     const msgs = snapshot.docs.map(doc => doc.data());
+    msgs.sort((a, b) => (a.at || 0) - (b.at || 0));
     renderMessages(msgs);
+  }, (error) => {
+    console.error("Firestore Error:", error);
   });
-};
+}
+window.loadChat = loadChat;
 
 function renderMessages(msgs){
   const box = $("chatMessages");
@@ -184,16 +197,16 @@ function renderMessages(msgs){
     let content = escapeHTML(m.text);
     
     if(m.fileUrl){
-      content += `<br><a href="${m.fileUrl}" target="_blank" download style="color: #007bff; text-decoration: underline; font-weight: bold; display:inline-block; margin-top:5px;">📥 ডাউনলোড করুন: ${escapeHTML(m.fileName || 'File')}</a>`;
+      content += `<br><a href="${m.fileUrl}" target="_blank" download style="color: #0084ff; text-decoration: underline; font-weight: bold; display:inline-block; margin-top:5px;">📥 ডাউনলোড করুন: ${escapeHTML(m.fileName || 'File')}</a>`;
     }
     
-    return `<div class="message ${isMe ? "me" : ""}" style="margin: 5px 0; padding: 8px 12px; border-radius: 8px; background: ${isMe ? '#dcf8c6' : '#fff'}; width: fit-content; max-width: 70%; ${isMe ? 'margin-left: auto;' : ''}">${content}</div>`;
+    return `<div class="message ${isMe ? "me" : ""}">${content}</div>`;
   }).join("");
   box.scrollTop = box.scrollHeight;
 }
 
-window.sendDemoMessage = async function(){
-  const input = $("messageInput"), text = input.value.trim(); 
+export async function sendDemoMessage(){
+  const input = $("messageInput"), text = input ? input.value.trim() : ""; 
   if(!text) return;
 
   const customerPhone = localStorage.getItem("currentCustomer");
@@ -219,11 +232,12 @@ window.sendDemoMessage = async function(){
       text: text,
       at: Date.now()
     });
-    input.value = "";
+    if(input) input.value = "";
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.sendDemoMessage = sendDemoMessage;
 
-window.sendDemoFile = async function(){
+export async function sendDemoFile(){
   const fileInput = $("demoFile");
   if(!fileInput || !fileInput.files[0]) return alert("দয়া করে একটি ফাইল সিলেক্ট করুন।");
   const file = fileInput.files[0];
@@ -264,10 +278,11 @@ window.sendDemoFile = async function(){
   } catch(e) { 
     alert("ফাইল আপলোড ব্যর্থ হয়েছে: " + e.message); 
   }
-};
+}
+window.sendDemoFile = sendDemoFile;
 
 // Admin Section
-window.adminLogin = function(){
+export function adminLogin(){
   const id = $("adminId").value.trim();
   const pass = $("adminPassword").value;
   if(typeof SHOP_CONFIG !== "undefined" && id === SHOP_CONFIG.demoAdmin.id && pass === SHOP_CONFIG.demoAdmin.password){
@@ -276,9 +291,10 @@ window.adminLogin = function(){
   } else {
     alert("Admin ID বা Password ভুল।");
   }
-};
+}
+window.adminLogin = adminLogin;
 
-window.loadAdminDashboard = async function(){
+export async function loadAdminDashboard(){
   if(localStorage.getItem("adminLoggedIn") !== "true"){
     location.href = "admin-login.html";
     return;
@@ -314,9 +330,10 @@ window.loadAdminDashboard = async function(){
       `).join("") || '<div class="notice">No designers added yet.</div>';
     }
   } catch(e) { console.error(e); }
-};
+}
+window.loadAdminDashboard = loadAdminDashboard;
 
-window.addDesigner = async function(){
+export async function addDesigner(){
   const name = $("desName").value.trim();
   const phone = $("desPhone").value.trim();
   const speciality = $("desSpec").value.trim();
@@ -335,34 +352,39 @@ window.addDesigner = async function(){
     $("desName").value = ""; $("desPhone").value = ""; $("desSpec").value = "";
     window.loadAdminDashboard();
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.addDesigner = addDesigner;
 
-window.deleteDesigner = async function(id){
+export async function deleteDesigner(id){
   if(!confirm("ডিজাইনারটি মুছতে চান?")) return;
   try {
     await deleteDoc(doc(db, "designers", id));
     window.loadAdminDashboard();
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.deleteDesigner = deleteDesigner;
 
-window.deleteCustomer = async function(phone){
+export async function deleteCustomer(phone){
   if(!confirm("কাস্টমারটি মুছতে চান?")) return;
   try {
     await deleteDoc(doc(db, "customers", phone));
     window.loadAdminDashboard();
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.deleteCustomer = deleteCustomer;
 
-window.toggleVip = async function(phone, makeVip){
+export async function toggleVip(phone, makeVip){
   try {
     await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
     window.loadAdminDashboard();
   } catch(e) { alert("Error: " + e.message); }
-};
+}
+window.toggleVip = toggleVip;
 
-window.logout = function(){
+export function logout(){
   localStorage.clear();
   location.href="index.html";
-};
+}
+window.logout = logout;
 
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
