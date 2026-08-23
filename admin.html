@@ -18,7 +18,7 @@
 
 <main class="container">
 
-  <!-- ১৩ & ১৪: সাইট ও চ্যাট ওভারভিউ স্ট্যাটস -->
+  <!-- স্ট্যাটস ওভারভিউ -->
   <section class="stats">
     <div class="stat"><b id="customerCount">0</b><span>মোট কাস্টমার</span></div>
     <div class="stat"><b id="designerCount">0</b><span>মোট ডিজাইনার</span></div>
@@ -26,7 +26,7 @@
     <div class="stat"><b id="activeUsersCount">0</b><span>অনলাইন/একটিভ ইউজার</span></div>
   </section>
 
-  <!-- ৭, ৮, ১২ & ৫: ব্র্যান্ডিং, লোগো, নোটিশ ও সাইট সেটিংস -->
+  <!-- সেটিংস, লোগো ও নোটিশ কন্ট্রোল -->
   <section class="card">
     <h3>⚙️ সাইট সেটিংস, লোগো ও নোটিশ কন্ট্রোল</h3>
     <div class="grid">
@@ -54,7 +54,7 @@
     <button class="btn primary" onclick="sendNotice()">নোটিশ পাবলিশ করুন</button>
   </section>
 
-  <!-- ১১: নতুন ডিজাইনার যুক্ত করা (প্রোফাইল পিক সহ) -->
+  <!-- নতুন ডিজাইনার যুক্ত করা -->
   <section class="card">
     <h3>🎨 নতুন ডিজাইনার যুক্ত করুন</h3>
     <input id="desName" placeholder="ডিজাইনারের নাম">
@@ -64,19 +64,19 @@
     <button class="btn primary" onclick="addDesigner()">Add Designer</button>
   </section>
 
-  <!-- ১, ৩, ৪, ৬, ৯, ১০ & ১১: ডিজাইনারদের লিস্ট ও কন্ট্রোল -->
+  <!-- ডিজাইনার তালিকা -->
   <section class="card">
     <h2>🎨 Designer List (ডিজাইনার নিয়ন্ত্রণ)</h2>
     <div id="adminDesigners"></div>
   </section>
 
-  <!-- ১, ২, ৩, ৪, ৯, ১০: কাস্টমারদের তালিকা ও নিয়ন্ত্রণ -->
+  <!-- কাস্টমার তালিকা -->
   <section class="card">
     <h2>👥 Customer List (কাস্টমার নিয়ন্ত্রণ)</h2>
     <div id="adminCustomers"></div>
   </section>
 
-  <!-- ১ & ১৪: রিয়েল-টাইম চ্যাট মনিটরিং ও ডিলিট অপশন -->
+  <!-- চ্যাট মনিটরিং ও কন্ট্রোল -->
   <section class="card">
     <h2>💬 চ্যাট মনিটর ও হিস্ট্রি লাইভ ভিউ</h2>
     <div class="grid">
@@ -95,10 +95,11 @@
       <p class="muted">এখানে লাইভ চ্যাট দেখা যাবে...</p>
     </div>
 
-    <!-- ৩ & ৬: যেকোনো ইউজারের সাথে এডমিনের সরাসরি কথা বলা -->
-    <div class="chat-footer" style="margin-top: 10px;">
+    <div class="chat-footer" style="margin-top: 10px; display:flex; gap: 5px;">
+      <input type="file" id="adminFile" accept="image/*,.pdf,.eps,.psd,.ai" style="display:none;" onchange="sendAdminFile()">
+      <button class="btn small" onclick="document.getElementById('adminFile').click()">📎</button>
       <input type="text" id="adminReplyInput" placeholder="এডমিন হিসেবে মেসেজ দিন...">
-      <button onclick="sendAdminReply()">➤ পাঠাও</button>
+      <button class="btn primary" onclick="sendAdminReply()">➤ পাঠাও</button>
     </div>
   </section>
 
