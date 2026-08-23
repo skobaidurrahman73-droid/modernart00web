@@ -394,4 +394,15 @@ export function logout(){
 }
 window.logout = logout;
 
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // ফায়ারবেস ইউজার থাকলে ফোন নম্বর সেট করে নিবে
+    if (user.phoneNumber) {
+      localStorage.setItem("currentCustomer", user.phoneNumber.replace("+88", ""));
+    }
+  }
+});
+
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
