@@ -274,3 +274,31 @@ window.designerLogin = async function(){
     alert("Error: " + e.message); 
   }
 };
+
+window.loadDesignerDashboard = async function(){
+  const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
+  if(!designer){ 
+    location.href = "designer-login.html"; 
+    return; 
+  }
+
+  if($("designerName")) $("designerName").textContent = designer.name;
+  if($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
+
+  try {
+    const custSnap = await getDocs(collection(db, "customers"));
+    const customers = custSnap.docs.map(doc => doc.data());
+
+    if($("designerCustomers")){
+      $("designerCustomers").innerHTML = customers.map(c => `
+        <div class="file-row">
+          <div>
+            <strong>${escapeHTML(c.name)}</strong><br>
+            <span class="muted">📱 ${escapeHTML(c.phone)}</span>
+          </div>
+          <button class="btn primary" style="width:auto" onclick="openChat('${designer.id}', '${escapeHTML(designer.name)}')">Chat</button>
+        </div>
+      `).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>';
+    }
+  } catch(e) { console.error(e); }
+};
