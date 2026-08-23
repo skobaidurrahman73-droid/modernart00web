@@ -229,3 +229,48 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
+// এডমিন থেকে ডিজাইনার যুক্ত করার ফাংশন
+window.addDesigner = async function(){
+  const name = $("desName").value.trim();
+  const phone = $("desPhone").value.trim();
+  const speciality = $("desSpec").value.trim();
+
+  if(!name || !phone) return alert("নাম এবং ফোন নম্বর দিন।");
+
+  try {
+    await ensureFirebaseUser();
+    await addDoc(collection(db, "designers"), { 
+      name, 
+      phone, 
+      speciality, 
+      createdAt: Date.now() 
+    });
+    alert("ডিজাইনার যুক্ত করা হয়েছে!");
+    $("desName").value = ""; $("desPhone").value = ""; $("desSpec").value = "";
+    window.loadAdminDashboard();
+  } catch(e) { alert("Error: " + e.message); }
+};
+
+// ডিজাইনার লগইন ফাংশন
+window.designerLogin = async function(){
+  const phone = $("designerPhone").value.trim();
+  if(!phone) return alert("ফোন নম্বর দিন।");
+
+  try {
+    await ensureFirebaseUser();
+    const q = query(collection(db, "designers"), where("phone", "==", phone));
+    const snap = await getDocs(q);
+    
+    if(snap.empty){
+      return alert("এই নম্বরে কোনো ডিজাইনার অ্যাকাউন্ট পাওয়া যায়নি। সঠিক নম্বর দিন।");
+    }
+    
+    const docSnap = snap.docs[0];
+    const designer = { id: docSnap.id, ...docSnap.data() };
+    localStorage.setItem("currentDesigner", JSON.stringify(designer));
+    alert("লগইন সফল হয়েছে!");
+    location.href = "chat.html";
+  } catch(e) { 
+    alert("Error: " + e.message); 
+  }
+};
