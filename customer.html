@@ -1,26 +1,41 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Customer Dashboard</title><link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar"><div><strong id="shopName">Modern Art & Press</strong><span id="customerStatus" class="badge">CUSTOMER</span></div><button class="btn small" onclick="logout()">Logout</button></header>
+<header class="topbar">
+  <div><strong id="shopName">Modern Art & Press</strong><span id="customerStatus" class="badge">CUSTOMER</span></div>
+  <button class="btn small" onclick="logout()">Logout</button>
+</header>
+
 <main class="container">
-<section class="card profile">
-  <div><div class="avatar">C</div></div>
-  <div><h2 id="customerName">Customer</h2><p id="customerPhone" class="muted"></p><span id="vipStatus" class="vip">NON-VIP</span></div>
-</section>
-<section class="grid">
-  <a class="card action" href="designers.html">🎨<b>Designer নির্বাচন</b><span>কোন Designer-এর সাথে কথা বলবেন?</span></a>
-  <a class="card action" href="files.html">📁<b>আমার Files</b><span>পাওয়া Design File দেখুন</span></a>
-  <div class="card action" onclick="showDemoNotice()">💬<b>Recent Chat</b><span>আপনার সাম্প্রতিক কথোপকথন</span></div>
-</section>
-<section class="card"><h2>📢 Notice</h2><div id="noticeBox" class="notice">কোনো নতুন Notice নেই।</div></section>
-<section class="notice emergency"><strong>🚨 জরুরি প্রয়োজনে</strong> <a id="emergencyLink" href="#">যোগাযোগ করুন</a></section>
+  <section class="card profile">
+    <div><div class="avatar">C</div></div>
+    <div><h2 id="customerName">Customer</h2><p id="customerPhone" class="muted"></p><span id="vipStatus" class="vip">NON-VIP</span></div>
+  </section>
+
+  <section class="grid">
+    <a class="card action" href="designers.html">🎨<b>Designer নির্বাচন</b><span>কোন Designer-এর সাথে কথা বলবেন?</span></a>
+    <a class="card action" href="files.html">📁<b>আমার Files</b><span>পাওয়া Design File দেখুন</span></a>
+  </section>
+
+  <section class="card"><h2>📢 Notice</h2><div id="noticeBox" class="notice">কোনো নতুন Notice নেই।</div></section>
+  <section class="notice emergency"><strong>🚨 জরুরি প্রয়োজনে</strong> <a id="emergencyLink" href="#">যোগাযোগ করুন</a></section>
 </main>
-<script src="js/config.js"></script>
-<script type="module" src="js/firebase-config.js"></script><script src="app.js"></script><script>loadCustomerDashboard();</script>
+
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+<script type="module">
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      if (typeof window.loadCustomerDashboard === "function") {
+        window.loadCustomerDashboard();
+      }
+    }, 300);
+  });
+</script>
 </body>
 </html>
-<script type="module" src="app.js"></script>
