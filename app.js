@@ -1,4 +1,4 @@
-import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
+import { db, auth, storage, ensureFirebaseUser } from "firebase-config.js";
 import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
