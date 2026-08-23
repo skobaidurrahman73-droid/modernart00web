@@ -27,10 +27,10 @@
 
     <!-- মেসেজ ও ফাইল ইনপুট -->
     <div class="chat-footer">
-      <label for="demoFile" style="cursor:pointer;font-size:20px;margin:0;" title="Send File">📎</label>
-      <input type="file" id="demoFile" accept="image/*,.pdf,.eps,.psd,.ai">
-      <input type="text" id="messageInput" placeholder="Aa" onkeypress="if(event.key==='Enter') sendDemoMessage()">
-      <button onclick="sendDemoMessage()">➤</button>
+  <label for="demoFile" class="file-btn">📎</label>
+  <input type="file" id="demoFile" style="display:none" onchange="sendDemoFile()">
+  <input type="text" id="messageInput" placeholder="মেসেজ লিখুন...">
+  <button onclick="sendDemoMessage()">➤</button>
     </div>
   </div>
 </div>
