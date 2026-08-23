@@ -1,41 +1,107 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <strong>👑 <span id="shopName">Modern Art & Press</span> Admin</strong>
-  <button class="btn small" onclick="logout()">Logout</button>
-  <button class="btn danger" onclick="clearOldData()">পুরনো চ্যাট ডিলিট করুন</button>
 
+<header class="topbar">
+  <strong>👑 <span id="shopName">Modern Art & Press</span> Admin Control</strong>
+  <div>
+    <button class="btn danger small" onclick="clearOldData()">৩০ দিনের পুরনো চ্যাট ডিলিট</button>
+    <button class="btn small" onclick="logout()">Logout</button>
+  </div>
 </header>
 
 <main class="container">
+
+  <!-- ১৩ & ১৪: সাইট ও চ্যাট ওভারভিউ স্ট্যাটস -->
   <section class="stats">
-    <div class="stat"><b id="customerCount">0</b><span>Customers</span></div>
-    <div class="stat"><b id="designerCount">0</b><span>Designers</span></div>
+    <div class="stat"><b id="customerCount">0</b><span>মোট কাস্টমার</span></div>
+    <div class="stat"><b id="designerCount">0</b><span>মোট ডিজাইনার</span></div>
+    <div class="stat"><b id="totalChatsCount">0</b><span>মোট চ্যাট মেসেজ</span></div>
+    <div class="stat"><b id="activeUsersCount">0</b><span>অনলাইন/একটিভ ইউজার</span></div>
   </section>
 
+  <!-- ৭, ৮, ১২ & ৫: ব্র্যান্ডিং, লোগো, নোটিশ ও সাইট সেটিংস -->
+  <section class="card">
+    <h3>⚙️ সাইট সেটিংস, লোগো ও নোটিশ কন্ট্রোল</h3>
+    <div class="grid">
+      <div>
+        <label>সাইটের লোগো ইউআরএল (Logo URL):</label>
+        <input id="siteLogoUrl" placeholder="https://example.com/logo.png">
+        <button class="btn primary small" onclick="updateSiteLogo()">লোগো সেভ করুন</button>
+      </div>
+      <div>
+        <label>সাইটের থিম / ডিজাইন কালার:</label>
+        <input type="color" id="themeColor" value="#111827">
+        <button class="btn primary small" onclick="updateThemeColor()">ডিজাইন পরিবর্তন করুন</button>
+      </div>
+    </div>
+
+    <hr style="margin: 15px 0;">
+
+    <h4>📢 নোটিশ পাঠাল (Notice)</h4>
+    <select id="noticeTarget">
+      <option value="all">সবাইকে (Global Notice)</option>
+      <option value="customers">সকল কাস্টমারকে</option>
+      <option value="designers">সকল ডিজাইনারকে</option>
+    </select>
+    <textarea id="noticeText" placeholder="নোটিশের তথ্য লিখুন..."></textarea>
+    <button class="btn primary" onclick="sendNotice()">নোটিশ পাবলিশ করুন</button>
+  </section>
+
+  <!-- ১১: নতুন ডিজাইনার যুক্ত করা (প্রোফাইল পিক সহ) -->
   <section class="card">
     <h3>🎨 নতুন ডিজাইনার যুক্ত করুন</h3>
     <input id="desName" placeholder="ডিজাইনারের নাম">
     <input id="desPhone" placeholder="ফোন নম্বর">
     <input id="desSpec" placeholder="স্পেশালিটি (যেমন: Logo, Banner)">
+    <input id="desImage" placeholder="প্রোফাইল ছবির URL (Profile Image)">
     <button class="btn primary" onclick="addDesigner()">Add Designer</button>
   </section>
 
+  <!-- ১, ৩, ৪, ৬, ৯, ১০ & ১১: ডিজাইনারদের লিস্ট ও কন্ট্রোল -->
   <section class="card">
-    <h2>🎨 Designer List</h2>
+    <h2>🎨 Designer List (ডিজাইনার নিয়ন্ত্রণ)</h2>
     <div id="adminDesigners"></div>
   </section>
 
+  <!-- ১, ২, ৩, ৪, ৯, ১০: কাস্টমারদের তালিকা ও নিয়ন্ত্রণ -->
   <section class="card">
-    <h2>👥 Customer List</h2>
+    <h2>👥 Customer List (কাস্টমার নিয়ন্ত্রণ)</h2>
     <div id="adminCustomers"></div>
   </section>
+
+  <!-- ১ & ১৪: রিয়েল-টাইম চ্যাট মনিটরিং ও ডিলিট অপশন -->
+  <section class="card">
+    <h2>💬 চ্যাট মনিটর ও হিস্ট্রি লাইভ ভিউ</h2>
+    <div class="grid">
+      <div>
+        <label>নির্দিষ্ট চ্যাট সিলেক্ট করুন:</label>
+        <select id="chatSelector" onchange="loadSelectedChatHistory()">
+          <option value="">-- চ্যাট বেছে নিন --</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button class="btn danger" onclick="deleteSelectedChatHistory()">এই চ্যাট হিস্ট্রি সম্পূর্ণ মুছুন</button>
+      </div>
+    </div>
+    
+    <div id="adminChatMessages" class="chat-messages" style="height: 250px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; overflow-y: auto;">
+      <p class="muted">এখানে লাইভ চ্যাট দেখা যাবে...</p>
+    </div>
+
+    <!-- ৩ & ৬: যেকোনো ইউজারের সাথে এডমিনের সরাসরি কথা বলা -->
+    <div class="chat-footer" style="margin-top: 10px;">
+      <input type="text" id="adminReplyInput" placeholder="এডমিন হিসেবে মেসেজ দিন...">
+      <button onclick="sendAdminReply()">➤ পাঠাও</button>
+    </div>
+  </section>
+
 </main>
 
 <script src="config.js"></script>
@@ -49,5 +115,6 @@
     }, 500);
   });
 </script>
+
 </body>
 </html>
