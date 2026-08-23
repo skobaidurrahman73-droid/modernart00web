@@ -191,15 +191,22 @@ function renderMessages(msgs){
   const box = $("chatMessages");
   if(!box) return;
   const isCustomerLoggedIn = !!localStorage.getItem("currentCustomer");
-  
+
   box.innerHTML = msgs.map(m => {
     const isMe = isCustomerLoggedIn ? (m.from === "customer") : (m.from === "designer");
     let content = escapeHTML(m.text);
-    
+
     if(m.fileUrl){
-      content += `<br><a href="${m.fileUrl}" target="_blank" download style="color: #0084ff; text-decoration: underline; font-weight: bold; display:inline-block; margin-top:5px;">📥 ডাউনলোড করুন: ${escapeHTML(m.fileName || 'File')}</a>`;
+      // ফাইলটি ছবি কিনা তা যাচাই করা
+      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName || m.fileUrl);
+
+      if(isImage){
+        content = `<img src="${m.fileUrl}" alt="Image" style="max-width: 100%; max-height: 220px; border-radius: 10px; display: block; margin-top: 5px; cursor: pointer;" onclick="window.open('${m.fileUrl}', '_blank')">`;
+      } else {
+        content = `📄 ${escapeHTML(m.fileName || 'File')}<br><a href="${m.fileUrl}" target="_blank" download style="color: #0084ff; font-weight: bold; display: inline-block; margin-top: 5px; text-decoration: underline;">📥 ডাউনলোড করুন</a>`;
+      }
     }
-    
+
     return `<div class="message ${isMe ? "me" : ""}">${content}</div>`;
   }).join("");
   box.scrollTop = box.scrollHeight;
