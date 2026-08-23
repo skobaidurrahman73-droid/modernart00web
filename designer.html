@@ -1,8 +1,41 @@
 <!DOCTYPE html>
-<html lang="bn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Designer Dashboard</title><link rel="stylesheet" href="css/style.css"></head>
-<body><header class="topbar"><strong id="shopName">Modern Art & Press</strong><button class="btn small" onclick="logout()">Logout</button></header>
-<main class="container"><section class="card profile"><div class="avatar">D</div><div><h2 id="designerName">Designer</h2><p id="designerPhoneView"></p></div></section>
-<section class="card"><h2>👥 Customers</h2><div id="designerCustomers"></div></section>
-<section class="card"><h2>⚙️ Permissions</h2><label class="check"><input id="sendFilePermission" type="checkbox" checked> File পাঠানোর অনুমতি</label><p class="muted">Production version-এ এই Permission Admin নিয়ন্ত্রণ করবেন।</p></section></main>
-<script src="js/config.js"></script>
-<script type="module" src="js/firebase-config.js"></script><script src="js/app.js"></script><script>loadDesignerDashboard();</script></body></html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Designer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <strong id="shopName">Modern Art & Press</strong>
+  <button class="btn small" onclick="logout()">Logout</button>
+</header>
+
+<main class="container">
+  <section class="card profile">
+    <div class="avatar">D</div>
+    <div>
+      <h2 id="designerName">Designer</h2>
+      <p id="designerPhoneView" class="muted"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>👥 Active Customers</h2>
+    <div id="designerCustomers"></div>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+<script type="module">
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      if (typeof window.loadDesignerDashboard === "function") {
+        window.loadDesignerDashboard();
+      }
+    }, 300);
+  });
+</script>
+</body>
+</html>
