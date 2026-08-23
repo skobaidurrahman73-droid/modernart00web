@@ -164,12 +164,19 @@ export async function loadChat() {
     return;
   }
 
-  if ($("chatDesigner")) {
-    $("chatDesigner").innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-        <span>${escapeHTML(displayName)}</span>
-        ${driveUrl ? `<a href="${driveUrl}" target="_blank" class="btn small" style="background:#0f9d58; color:#fff; padding:6px 12px; border-radius:8px; text-decoration:none;">📁 Drive Folder</a>` : ''}
-      </div>`;
+  if ($("chatDesigner")) $("chatDesigner").textContent = displayName;
+
+  // 📎 আইকনে ড্রাইভের লিঙ্ক যোগ করা
+  const driveBtn = $("driveBtn");
+  if (driveBtn) {
+    if (driveUrl) {
+      driveBtn.href = driveUrl;
+      driveBtn.target = "_blank";
+      driveBtn.onclick = null;
+    } else {
+      driveBtn.href = "javascript:void(0)";
+      driveBtn.onclick = () => alert("কোনো ড্রাইভ লিংক যুক্ত করা নেই!");
+    }
   }
 
   const q = query(collection(db, "chats"), where("chatId", "==", chatId));
