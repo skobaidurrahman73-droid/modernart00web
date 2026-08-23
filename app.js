@@ -1,5 +1,5 @@
 import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
-import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const $ = id => document.getElementById(id);
@@ -13,6 +13,7 @@ function applyBranding(){
 }
 document.addEventListener("DOMContentLoaded", applyBranding);
 
+// Customer Auth
 window.customerLogin = async function(){
   const phone=$("phone").value.trim(), receipt=$("receiptId").value.trim();
   if(!phone || !receipt) return alert("ফোন নম্বর এবং Receipt ID দিন।");
@@ -58,6 +59,7 @@ window.loadCustomerDashboard = async function(){
   } catch(e) { console.error(e); }
 };
 
+// Designers & Chat
 window.renderDesigners = function(){
   const box=$("designerList"); if(!box || typeof SHOP_CONFIG === "undefined") return;
   box.innerHTML=SHOP_CONFIG.designers.map(d=>`
@@ -143,6 +145,60 @@ window.renderFiles = function(){
     if(!files.length){box.innerHTML='<div class="notice">এখন কোনো Active File নেই।</div>';return;}
     box.innerHTML=files.map(f=>`<div class="file-row"><div><strong>📄 ${escapeHTML(f.name)}</strong><br><span class="muted">Expires: ${new Date(f.expiresAt).toLocaleString()}</span></div><a class="btn" href="${f.url}" target="_blank" download>Download</a></div>`).join("");
   });
+};
+
+// Admin Section
+window.adminLogin = function(){
+  const id = $("adminId").value.trim();
+  const pass = $("adminPassword").value;
+  if(typeof SHOP_CONFIG !== "undefined" && id === SHOP_CONFIG.demoAdmin.id && pass === SHOP_CONFIG.demoAdmin.password){
+    localStorage.setItem("adminLoggedIn","true");
+    location.href = "admin.html";
+  } else {
+    alert("Admin ID বা Password ভুল।");
+  }
+};
+
+window.loadAdminDashboard = async function(){
+  if(localStorage.getItem("adminLoggedIn") !== "true"){
+    location.href = "admin-login.html";
+    return;
+  }
+  try {
+    const custSnap = await getDocs(collection(db, "customers"));
+    const customers = custSnap.docs.map(doc => doc.data());
+    
+    if($("customerCount")) $("customerCount").textContent = customers.length;
+    if($("designerCount")) $("designerCount").textContent = typeof SHOP_CONFIG !== "undefined" ? SHOP_CONFIG.designers.length : 0;
+
+    const chatSnap = await getDocs(collection(db, "chats"));
+    if($("chatCount")) $("chatCount").textContent = chatSnap.size;
+
+    const fileSnap = await getDocs(collection(db, "files"));
+    if($("fileCount")) $("fileCount").textContent = fileSnap.size;
+
+    if($("adminCustomers")){
+      $("adminCustomers").innerHTML = customers.map(c => `
+        <div class="file-row">
+          <div>
+            <strong>${escapeHTML(c.name)}</strong><br>
+            <span class="muted">${escapeHTML(c.phone)} · ${c.vip ? "⭐ VIP" : "Non-VIP"} ${c.vipRequested ? "· VIP Requested" : ""}</span>
+          </div>
+          <button class="btn" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
+        </div>
+      `).join("") || '<div class="notice">No customers yet.</div>';
+    }
+  } catch(e) {
+    console.error(e);
+  }
+};
+
+window.toggleVip = async function(phone, makeVip){
+  try {
+    await setDoc(doc(db, "customers", phone), { vip: makeVip }, { merge: true });
+    alert("VIP Status পরিবর্তন হয়েছে!");
+    window.loadAdminDashboard();
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.logout = function(){
