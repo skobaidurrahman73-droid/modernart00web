@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title><link rel="stylesheet" href="css/style.css"></head>
+<body><header class="topbar"><strong>👑 <span id="shopName">Modern Art & Press</span> Admin</strong><button class="btn small" onclick="logout()">Logout</button></header>
+<main class="container">
+<section class="stats"><div class="stat"><b id="customerCount">0</b><span>Customers</span></div><div class="stat"><b id="designerCount">0</b><span>Designers</span></div><div class="stat"><b id="chatCount">0</b><span>Chats</span></div><div class="stat"><b id="fileCount">0</b><span>Files</span></div></section>
+<section class="card"><h2>👥 Customers</h2><div id="adminCustomers"></div></section>
+<section class="card"><h2>🎨 Designers</h2><div id="adminDesigners"></div></section>
+<section class="card"><h2>⚙️ System Settings</h2><label class="check"><input type="checkbox" id="autoChatDelete"> Chat Auto Delete</label><label>Chat retention (hours)</label><input id="chatRetention" type="number" value="24"><label class="check"><input type="checkbox" id="fileDelivery"> File Delivery Enabled</label><button class="btn primary" onclick="saveAdminSettings()">Save Settings</button></section>
+<section class="card"><h2>📢 Notice</h2><textarea id="noticeText" rows="4" placeholder="সবার জন্য Notice লিখুন..."></textarea><button class="btn primary" onclick="publishNotice()">Publish Notice</button></section>
+</main>
+<script src="js/config.js"></script>
+<script type="module" src="js/firebase-config.js"></script><script src="js/app.js"></script><script>loadAdminDashboard();</script></body></html>
