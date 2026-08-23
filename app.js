@@ -1,4 +1,4 @@
-import { db, auth, storage, ensureFirebaseUser } from "firebase-config.js";
+import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
 import { doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
@@ -17,40 +17,45 @@ window.customerLogin = async function(){
   const phone=$("phone").value.trim(), receipt=$("receiptId").value.trim();
   if(!phone || !receipt) return alert("ফোন নম্বর এবং Receipt ID দিন।");
   
-  const snap = await getDoc(doc(db, "customers", phone));
-  if(!snap.exists()){
-    location.href=`register.html?phone=${encodeURIComponent(phone)}&receipt=${encodeURIComponent(receipt)}`;
-    return;
-  }
-  localStorage.setItem("currentCustomer", phone);
-  location.href="customer.html";
+  try {
+    const snap = await getDoc(doc(db, "customers", phone));
+    if(!snap.exists()){
+      location.href=`register.html?phone=${encodeURIComponent(phone)}&receipt=${encodeURIComponent(receipt)}`;
+      return;
+    }
+    localStorage.setItem("currentCustomer", phone);
+    location.href="customer.html";
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.registerCustomer = async function(){
   const name=$("name").value.trim(), phone=$("phone").value.trim(), receipt=$("receiptId").value.trim();
   if(!name||!phone||!receipt) return alert("সব তথ্য পূরণ করুন।");
   
-  await ensureFirebaseUser();
-  await setDoc(doc(db, "customers", phone), {
-    name, phone, receiptId: receipt, vip: false,
-    vipRequested: $("vipRequest").checked, createdAt: Date.now()
-  });
-  localStorage.setItem("currentCustomer", phone);
-  alert("Account তৈরি হয়েছে।");
-  location.href="customer.html";
+  try {
+    await ensureFirebaseUser();
+    await setDoc(doc(db, "customers", phone), {
+      name, phone, receiptId: receipt, vip: false,
+      vipRequested: $("vipRequest").checked, createdAt: Date.now()
+    });
+    localStorage.setItem("currentCustomer", phone);
+    alert("Account তৈরি হয়েছে।");
+    location.href="customer.html";
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.loadCustomerDashboard = async function(){
   const phone = localStorage.getItem("currentCustomer");
   if(!phone){ location.href="index.html"; return; }
   
-  const snap = await getDoc(doc(db, "customers", phone));
-  if(!snap.exists()){ location.href="index.html"; return; }
-  const c = snap.data();
-  
-  if($("customerName")) $("customerName").textContent=c.name;
-  if($("customerPhone")) $("customerPhone").textContent=c.phone;
-  if($("vipStatus")) $("vipStatus").textContent=c.vip ? "⭐ VIP" : "NON-VIP";
+  try {
+    const snap = await getDoc(doc(db, "customers", phone));
+    if(!snap.exists()){ location.href="index.html"; return; }
+    const c = snap.data();
+    if($("customerName")) $("customerName").textContent=c.name;
+    if($("customerPhone")) $("customerPhone").textContent=c.phone;
+    if($("vipStatus")) $("vipStatus").textContent=c.vip ? "⭐ VIP" : "NON-VIP";
+  } catch(e) { console.error(e); }
 };
 
 window.renderDesigners = function(){
@@ -97,13 +102,15 @@ window.sendDemoMessage = async function(){
   const d=JSON.parse(localStorage.getItem("selectedDesigner")||"null"); if(!d)return;
   const phone = localStorage.getItem("currentCustomer");
   
-  await addDoc(collection(db, "chats"), {
-    chatId: `${phone}_${d.id}`,
-    from: "customer",
-    text: text,
-    at: Date.now()
-  });
-  input.value="";
+  try {
+    await addDoc(collection(db, "chats"), {
+      chatId: `${phone}_${d.id}`,
+      from: "customer",
+      text: text,
+      at: Date.now()
+    });
+    input.value="";
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.sendDemoFile = async function(){
@@ -111,18 +118,20 @@ window.sendDemoFile = async function(){
   const seconds=Number($("fileDuration").value);
   const phone = localStorage.getItem("currentCustomer");
   
-  const storageRef = ref(storage, `files/${Date.now()}_${file.name}`);
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
-  
-  await addDoc(collection(db, "files"), {
-    name: file.name,
-    url: url,
-    customerPhone: phone,
-    expiresAt: Date.now() + seconds*1000
-  });
-  alert("File Upload সফল হয়েছে।");
-  $("demoFile").value="";
+  try {
+    const storageRef = ref(storage, `files/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    
+    await addDoc(collection(db, "files"), {
+      name: file.name,
+      url: url,
+      customerPhone: phone,
+      expiresAt: Date.now() + seconds*1000
+    });
+    alert("File Upload সফল হয়েছে।");
+    $("demoFile").value="";
+  } catch(e) { alert("Error: " + e.message); }
 };
 
 window.renderFiles = function(){
