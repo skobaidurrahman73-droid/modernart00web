@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Art & Press</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <div class="brand-logo">MAP</div>
+        <div>
+            <h2 id="shopName">Modern Art & Press</h2>
+            <small>Digital Printing & Design Service</small>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <section class="card hero">
+        <div class="hero-logo">MAP</div>
+        <h1>Modern Art & Press</h1>
+        <p>
+            আপনার রিসিটে থাকা QR Code স্ক্যান করে
+            আমাদের সাথে যোগাযোগ করুন এবং আপনার
+            Design File সংগ্রহ করুন।
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>🔐 Customer Access</h2>
+        <p class="muted">আপনার Receipt-এর তথ্য দিয়ে প্রবেশ করুন।</p>
+
+        <label for="phone">📱 ফোন নম্বর</label>
+        <input id="phone" type="tel" maxlength="11"
+               placeholder="01XXXXXXXXX" autocomplete="tel">
+
+        <label for="receiptId">🧾 Receipt ID</label>
+        <input id="receiptId" type="text"
+               placeholder="যেমন: PR-2026-000001">
+
+        <button class="btn primary" onclick="customerLogin()">
+            Continue
+        </button>
+
+        <p class="muted info-text">
+            প্রথমবার হলে আপনার Account তৈরি করার সুযোগ দেওয়া হবে।
+        </p>
+    </section>
+
+    <section class="card center">
+        <h3>নতুন Customer?</h3>
+        <p class="muted">
+            আপনার Receipt-এর QR Code ব্যবহার করে Registration করুন।
+        </p>
+        <a href="register.html" class="btn">
+            Create Customer Account
+        </a>
+    </section>
+
+    <section class="notice emergency">
+        <strong>🚨 জরুরি প্রয়োজনে</strong>
+        <br>
+        যোগাযোগ করুন:
+        <a id="emergencyLink" href="tel:01712371058">
+            01712371058
+        </a>
+    </section>
+</main>
+
+<script src="js/config.js"></script>
+<script type="module" src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
