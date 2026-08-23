@@ -1,25 +1,26 @@
 // Modern Art & Press - Firebase configuration
 // এই ফাইলটি আপনার Firebase Web App configuration-এর জন্য।
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
-
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCxZ-JcazpQmQ_y7Hm9xYeIkZMetBnEFJE",
   authDomain: "modern-art-press-8a01c.firebaseapp.com",
   projectId: "modern-art-press-8a01c",
   storageBucket: "modern-art-press-8a01c.firebasestorage.app",
   messagingSenderId: "638080324810",
-  appId: "1:638080324810:web:4a4dd231fcf6f7512c5033",
-  measurementId: "G-YYR6M30G7G"
+  appId: "1:638080324810:web:a9bbbec9c122a2812c5033",
+  measurementId: "G-TLGD1JDRVP"
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 // Demo authentication only.
 // এটি OTP নয়। Production-এর secure phone-number-only login পরে server-side ব্যবস্থা দিয়ে করতে হবে.
