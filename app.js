@@ -126,6 +126,7 @@ export async function loadDesignerDashboard() {
           <div>
             <strong>${escapeHTML(c.name)}</strong><br>
             <span class="muted">📱 ${escapeHTML(c.phone)}</span>
+            ${c.receiptId ? `<br><span class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</span>` : ''}
           </div>
           <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
         </div>
@@ -299,6 +300,7 @@ export async function loadAdminDashboard() {
         <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
           <div>
             <strong>${escapeHTML(c.name)}</strong> (${escapeHTML(c.phone)})
+            ${c.receiptId ? `<br><small class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</small>` : ''}
             ${c.banned ? '<span style="color:red;font-weight:bold;"> [BANNED]</span>' : ''}
           </div>
           <div>
