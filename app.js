@@ -423,4 +423,186 @@ export async function clearOldData() {
 }
 window.clearOldData = clearOldData;
 
+// Admin Dashboard Loader (Real-time Stats & Lists)
+export async function loadAdminDashboard() {
+  if (localStorage.getItem("adminLoggedIn") !== "true") {
+    location.href = "admin-login.html";
+    return;
+  }
+
+  try {
+    // 1. Customers
+    const custSnap = await getDocs(collection(db, "customers"));
+    const customers = custSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if ($("customerCount")) $("customerCount").textContent = customers.length;
+
+    if ($("adminCustomers")) {
+      $("adminCustomers").innerHTML = customers.map(c => `
+        <div class="file-row">
+          <div>
+            <strong>${escapeHTML(c.name)}</strong> (${escapeHTML(c.phone)})
+            ${c.banned ? '<span style="color:red;font-weight:bold;"> [BANNED]</span>' : ''}
+          </div>
+          <div>
+            <button class="btn small" onclick="editUser('customers', '${c.id}')">✏️ Edit</button>
+            <button class="btn small ${c.banned ? '' : 'danger'}" onclick="toggleBanUser('customers', '${c.id}', ${!!c.banned})">${c.banned ? 'Unban' : 'Ban'}</button>
+            <button class="btn danger small" onclick="deleteCustomer('${c.id}')">Delete</button>
+          </div>
+        </div>
+      `).join("") || '<div class="notice">No customers found.</div>';
+    }
+
+    // 2. Designers
+    const desSnap = await getDocs(collection(db, "designers"));
+    const designers = desSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if ($("designerCount")) $("designerCount").textContent = designers.length;
+
+    if ($("adminDesigners")) {
+      $("adminDesigners").innerHTML = designers.map(d => `
+        <div class="file-row">
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${d.image ? `<img src="${d.image}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : ''}
+            <div>
+              <strong>${escapeHTML(d.name)}</strong> (${escapeHTML(d.phone)})<br>
+              <span class="muted">${escapeHTML(d.speciality || '')}</span>
+              ${d.banned ? '<span style="color:red;font-weight:bold;"> [BANNED]</span>' : ''}
+            </div>
+          </div>
+          <div>
+            <button class="btn small" onclick="editUser('designers', '${d.id}')">✏️ Edit</button>
+            <button class="btn small ${d.banned ? '' : 'danger'}" onclick="toggleBanUser('designers', '${d.id}', ${!!d.banned})">${d.banned ? 'Unban' : 'Ban'}</button>
+            <button class="btn danger small" onclick="deleteDesigner('${d.id}')">Delete</button>
+          </div>
+        </div>
+      `).join("") || '<div class="notice">No designers found.</div>';
+    }
+
+    // 3. Total Chats & Chat Selector
+    const chatSnap = await getDocs(collection(db, "chats"));
+    if ($("totalChatsCount")) $("totalChatsCount").textContent = chatSnap.size;
+
+    const chatIds = [...new Set(chatSnap.docs.map(doc => doc.data().chatId).filter(Boolean))];
+    const selector = $("chatSelector");
+    if (selector) {
+      selector.innerHTML = '<option value="">-- চ্যাট বেছে নিন --</option>' + 
+        chatIds.map(id => `<option value="${id}">Chat ID: ${id}</option>`).join("");
+    }
+
+  } catch (e) { console.error("Admin Load Error:", e); }
+}
+window.loadAdminDashboard = loadAdminDashboard;
+
+// Live Chat Viewer for Admin
+let currentAdminChatUnsub = null;
+export function loadSelectedChatHistory() {
+  const chatId = $("chatSelector").value;
+  const box = $("adminChatMessages");
+  if (!chatId || !box) return;
+
+  if (currentAdminChatUnsub) currentAdminChatUnsub();
+
+  const q = query(collection(db, "chats"), where("chatId", "==", chatId));
+  currentAdminChatUnsub = onSnapshot(q, (snapshot) => {
+    const msgs = snapshot.docs.map(doc => doc.data()).sort((a,b) => (a.at||0)-(b.at||0));
+    box.innerHTML = msgs.map(m => `
+      <div class="message ${m.from === 'admin' ? 'me' : ''}" style="margin:4px 0;padding:6px 10px;border-radius:6px;background:${m.from==='admin'?'#0084ff':(m.from==='designer'?'#e4e6eb':'#dcf8c6')};color:${m.from==='admin'?'#fff':'#000'};width:fit-content;max-width:80%;${m.from==='admin'?'margin-left:auto;':''}">
+        <small style="display:block;font-size:10px;opacity:0.8;">[${m.from.toUpperCase()}]</small>
+        ${escapeHTML(m.text)}
+      </div>
+    `).join("");
+    box.scrollTop = box.scrollHeight;
+  });
+}
+window.loadSelectedChatHistory = loadSelectedChatHistory;
+
+// Send Admin Reply to Chat
+export async function sendAdminReply() {
+  const chatId = $("chatSelector").value;
+  const input = $("adminReplyInput");
+  const text = input ? input.value.trim() : "";
+
+  if (!chatId) return alert("দয়া করে একটি চ্যাট সিলেক্ট করুন।");
+  if (!text) return;
+
+  try {
+    await addDoc(collection(db, "chats"), {
+      chatId, from: "admin", text, at: Date.now()
+    });
+    input.value = "";
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.sendAdminReply = sendAdminReply;
+
+// Delete Entire Selected Chat History
+export async function deleteSelectedChatHistory() {
+  const chatId = $("chatSelector").value;
+  if (!chatId) return alert("চ্যাট সিলেক্ট করুন।");
+  if (!confirm("এই চ্যাট হিস্ট্রি সম্পূর্ণ মুছে ফেলতে চান?")) return;
+
+  try {
+    const q = query(collection(db, "chats"), where("chatId", "==", chatId));
+    const snap = await getDocs(q);
+    const promises = snap.docs.map(d => deleteDoc(doc(db, "chats", d.id)));
+    await Promise.all(promises);
+    alert("চ্যাট মুছে ফেলা হয়েছে!");
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.deleteSelectedChatHistory = deleteSelectedChatHistory;
+
+// User Ban / Unban
+export async function toggleBanUser(coll, id, currentBanState) {
+  try {
+    await setDoc(doc(db, coll, id), { banned: !currentBanState }, { merge: true });
+    alert(currentBanState ? "Unbanned!" : "Banned!");
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.toggleBanUser = toggleBanUser;
+
+// Edit User Info
+export async function editUser(coll, id) {
+  const newName = prompt("নতুন নাম দিন:");
+  const newPhone = prompt("নতুন ফোন নম্বর দিন:");
+  if (!newName || !newPhone) return;
+
+  try {
+    await setDoc(doc(db, coll, id), { name: newName, phone: newPhone }, { merge: true });
+    alert("তথ্য পরিবর্তন হয়েছে!");
+    loadAdminDashboard();
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.editUser = editUser;
+
+// Send Global / Targeted Notice
+export async function sendNotice() {
+  const target = $("noticeTarget").value;
+  const text = $("noticeText").value.trim();
+  if (!text) return alert("নোটিশ লিখুন।");
+
+  try {
+    await addDoc(collection(db, "notices"), { target, text, at: Date.now() });
+    alert("নোটিশ পাঠানো হয়েছে!");
+    $("noticeText").value = "";
+  } catch (e) { alert("Error: " + e.message); }
+}
+window.sendNotice = sendNotice;
+
+// Update Site Logo & Theme
+export async function updateSiteLogo() {
+  const logo = $("siteLogoUrl").value.trim();
+  if (!logo) return;
+  localStorage.setItem("siteLogo", logo);
+  alert("লোগো পরিবর্তন করা হয়েছে!");
+}
+window.updateSiteLogo = updateSiteLogo;
+
+export async function updateThemeColor() {
+  const color = $("themeColor").value;
+  document.documentElement.style.setProperty('--main-bg', color);
+  localStorage.setItem("themeColor", color);
+  alert("ডিজাইন কালার সেট হয়েছে!");
+}
+window.updateThemeColor = updateThemeColor;
+
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
