@@ -28,14 +28,10 @@
 
     <section class="card">
         <h2>🔐 Customer Access</h2>
-        <p class="muted">আপনার Receipt-এর তথ্য দিয়ে প্রবেশ করুন।</p>
+        <p class="muted">আপনার ফোন নম্বর দিয়ে প্রবেশ করুন।</p>
 
         <label for="phone">📱 ফোন নম্বর</label>
-        <input id="phone" type="tel" maxlength="11"
-               placeholder="01XXXXXXXXX" autocomplete="tel">
-
-        <label for="receiptId">🧾 Receipt ID</label>
-        
+        <input id="phone" type="tel" maxlength="11" placeholder="01XXXXXXXXX" autocomplete="tel" required>
 
         <button class="btn primary" onclick="customerLogin()">
             Continue
@@ -56,6 +52,11 @@
         </a>
     </section>
 
+    <div style="text-align:center; margin: 15px 0;">
+        <a href="designer-login.html" style="margin-right: 15px; text-decoration: none; color: #0084ff;">ডিজাইনার লগইন</a>
+        <a href="admin-login.html" style="text-decoration: none; color: #0084ff;">এডমিন লগইন</a>
+    </div>
+
     <section class="notice emergency">
         <strong>🚨 জরুরি প্রয়োজনে</strong>
         <br>
@@ -68,7 +69,6 @@
 
 <script src="config.js"></script>
 <script type="module" src="firebase-config.js"></script>
-<script src="app.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
