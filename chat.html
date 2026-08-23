@@ -1,45 +1,52 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messenger Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<header class="topbar">
-  <div><strong id="shopName">Modern Art & Press</strong> <span id="chatDesigner" class="badge">DESIGNER</span></div>
-  <a href="designers.html" class="btn small">Back</a>
-</header>
+<body style="margin:0;">
 
-<main class="chat-page">
-  <div id="chatMessages" class="messages"></div>
-
-  <div class="composer">
-    <input id="messageInput" placeholder="Message লিখুন..." onkeypress="if(event.key==='Enter') sendDemoMessage()">
-    <button class="btn primary" onclick="sendDemoMessage()">Send</button>
+<div class="messenger-container">
+  <!-- বামপাশের চ্যাট লিস্ট -->
+  <div class="messenger-sidebar">
+    <div class="sidebar-header">Chats</div>
+    <div id="inboxList" class="chat-list"></div>
   </div>
 
-  <div class="card" style="margin-top: 15px;">
-    <h3>📎 File Send</h3>
-    <input id="demoFile" type="file">
-    <select id="fileDuration">
-      <option value="3600">1 Hour</option>
-      <option value="86400">24 Hours</option>
-      <option value="259200">3 Days</option>
-    </select>
-    <button class="btn" onclick="sendDemoFile()">Send File</button>
+  <!-- ডানপাশের মূল চ্যাট এরিয়া -->
+  <div class="messenger-main">
+    <div class="chat-header">
+      <div id="chatAvatar" class="avatar" style="width:35px;height:35px;">U</div>
+      <span id="chatDesigner">User</span>
+    </div>
+
+    <!-- মেসেজ দেখানোর বক্স -->
+    <div id="chatMessages" class="chat-messages"></div>
+
+    <!-- মেসেজ ও ফাইল ইনপুট -->
+    <div class="chat-footer">
+      <label for="demoFile" style="cursor:pointer;font-size:20px;margin:0;" title="Send File">📎</label>
+      <input type="file" id="demoFile" style="display:none;" onchange="sendDemoFile()">
+      <input type="text" id="messageInput" placeholder="Aa" onkeypress="if(event.key==='Enter') sendDemoMessage()">
+      <button onclick="sendDemoMessage()">➤</button>
+    </div>
   </div>
-</main>
+</div>
 
 <script src="config.js"></script>
 <script type="module" src="app.js"></script>
 <script type="module">
-  window.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-      if (typeof window.loadChat === "function") {
-        window.loadChat();
-      }
-    }, 300);
+  import { loadChat, sendDemoMessage, sendDemoFile } from './app.js';
+
+  window.sendDemoMessage = sendDemoMessage;
+  window.sendDemoFile = sendDemoFile;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof loadChat === "function") {
+      loadChat();
+    }
   });
 </script>
 </body>
