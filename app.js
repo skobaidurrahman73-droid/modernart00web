@@ -405,4 +405,22 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+export async function clearOldData() {
+  if(!confirm("৩০ দিনের বেশি পুরনো সব চ্যাট মুছে ফেলতে চান?")) return;
+  
+  try {
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const q = query(collection(db, "chats"), where("at", "<", thirtyDaysAgo));
+    const snap = await getDocs(q);
+    
+    const deletePromises = snap.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+    
+    alert("পুরানো ডাটা সফলভাবে মুছে ফেলা হয়েছে!");
+  } catch(e) { 
+    alert("Error: " + e.message); 
+  }
+}
+window.clearOldData = clearOldData;
+
 function escapeHTML(str){return String(str??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));}
