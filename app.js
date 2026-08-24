@@ -67,12 +67,11 @@ export async function loadCustomerDashboard() {
     if ($("customerPhone")) $("customerPhone").textContent = c.phone;
     if ($("vipStatus")) $("vipStatus").textContent = c.vip ? "⭐ VIP" : "NON-VIP";
 
-    // Load Notices for Customer
     loadNoticesForUser("customer");
   } catch (e) { console.error(e); }
 }
 
-// Notice Loader for Users
+// Notice Loader
 async function loadNoticesForUser(userType) {
   const noticeBox = $("noticeBoard") || $("userNotice");
   if (!noticeBox) return;
@@ -159,11 +158,19 @@ export function togglePinCustomer(phone) {
   loadDesignerDashboard();
 }
 
+let designerChatUnsub = null;
+let lastKnownMessageCount = {};
+
 export async function loadDesignerDashboard() {
   const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
   if (!designer) { location.href = "designer-login.html"; return; }
   if ($("designerName")) $("designerName").textContent = designer.name;
   if ($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
+
+  // Request Chrome Notification Permission
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 
   try {
     loadNoticesForUser("designer");
@@ -173,41 +180,83 @@ export async function loadDesignerDashboard() {
     const pinnedKey = `pinned_cust_${designer.id}`;
     const pinnedPhones = JSON.parse(localStorage.getItem(pinnedKey) || "[]");
 
-    if ($("designerCustomers")) {
-      const renderCard = (c, isPinned) => `
-        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd; ${isPinned ? 'background:#eef6ff;' : ''}">
-          <div>
-            <strong>${escapeHTML(c.name)}</strong> ${c.vip ? '<span style="color:#d97706;font-weight:bold;">⭐ VIP</span>' : '<span class="muted">(NON-VIP)</span>'}
-            ${isPinned ? '<span style="color:#2563eb;font-weight:bold;margin-left:5px;">📌 Pinned</span>' : ''}<br>
-            <span class="muted">📱 ${escapeHTML(c.phone)}</span>
-            ${c.receiptId ? `<br><span class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</span>` : ''}
-          </div>
-          <div style="display:flex; gap:5px; align-items:center;">
-            <button class="btn small" onclick="togglePinCustomer('${escapeHTML(c.phone)}')">${isPinned ? "📌 Unpin" : "📌 Pin"}</button>
-            <button class="btn small" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
-            <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
-          </div>
-        </div>
-      `;
+    // Realtime Customer Message Listener & Notification
+    if (designerChatUnsub) designerChatUnsub();
+    
+    designerChatUnsub = onSnapshot(collection(db, "chats"), (snapshot) => {
+      const activeMessages = {};
+      
+      snapshot.docs.forEach(d => {
+        const data = d.data();
+        if (data.chatId && data.chatId.endsWith(`_${designer.id}`) && data.from === "customer") {
+          const cPhone = data.chatId.split("_")[0];
+          if (!activeMessages[cPhone]) activeMessages[cPhone] = [];
+          activeMessages[cPhone].push(data);
+        }
+      });
 
-      const pinnedList = customers.filter(c => pinnedPhones.includes(c.phone));
-      const unpinnedList = customers.filter(c => !pinnedPhones.includes(c.phone));
+      // Show Chrome Notification for new message
+      Object.keys(activeMessages).forEach(cPhone => {
+        const msgs = activeMessages[cPhone];
+        const prevCount = lastKnownMessageCount[cPhone] || 0;
+        if (msgs.length > prevCount && prevCount !== 0) {
+          const lastMsg = msgs[msgs.length - 1];
+          const custObj = customers.find(c => c.phone === cPhone);
+          const senderName = custObj ? custObj.name : cPhone;
 
-      let html = "";
-      if (pinnedList.length > 0) {
-        html += `<div style="margin-bottom:15px; border:2px solid #2563eb; border-radius:8px; padding:10px; background:#fafcff;">
-          <h4 style="margin:0 0 10px 0; color:#2563eb;">📌 পিন করা কাস্টমার</h4>
-          ${pinnedList.map(c => renderCard(c, true)).join("")}
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(`নতুন বার্তা: ${senderName}`, {
+              body: lastMsg.text || "একটি ফাইল পাঠিয়েছেন।",
+              icon: "https://cdn-icons-png.flaticon.com/512/732/732200.png"
+            });
+          }
+        }
+        lastKnownMessageCount[cPhone] = msgs.length;
+      });
+
+      // Render Customer List with Unread Badge
+      if ($("designerCustomers")) {
+        const renderCard = (c, isPinned) => {
+          const hasUnread = (activeMessages[c.phone] || []).length > 0;
+          return `
+            <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd; ${isPinned ? 'background:#eef6ff;' : ''}">
+              <div>
+                <strong>${escapeHTML(c.name)}</strong> 
+                ${c.vip ? '<span style="color:#d97706;font-weight:bold;">⭐ VIP</span>' : '<span class="muted">(NON-VIP)</span>'}
+                ${hasUnread ? '<span style="background:#ef4444; color:#fff; padding:2px 6px; border-radius:10px; font-size:11px; margin-left:5px; font-weight:bold;">🔴 নতুন বার্তা</span>' : ''}
+                ${isPinned ? '<span style="color:#2563eb;font-weight:bold;margin-left:5px;">📌 Pinned</span>' : ''}<br>
+                <span class="muted">📱 ${escapeHTML(c.phone)}</span>
+                ${c.receiptId ? `<br><span class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</span>` : ''}
+              </div>
+              <div style="display:flex; gap:5px; align-items:center;">
+                <button class="btn small" onclick="togglePinCustomer('${escapeHTML(c.phone)}')">${isPinned ? "📌 Unpin" : "📌 Pin"}</button>
+                <button class="btn small" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
+                <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
+              </div>
+            </div>
+          `;
+        };
+
+        const pinnedList = customers.filter(c => pinnedPhones.includes(c.phone));
+        const unpinnedList = customers.filter(c => !pinnedPhones.includes(c.phone));
+
+        let html = "";
+        if (pinnedList.length > 0) {
+          html += `<div style="margin-bottom:15px; border:2px solid #2563eb; border-radius:8px; padding:10px; background:#fafcff;">
+            <h4 style="margin:0 0 10px 0; color:#2563eb;">📌 পিন করা কাস্টমার</h4>
+            ${pinnedList.map(c => renderCard(c, true)).join("")}
+          </div>`;
+        }
+
+        html += `<div>
+          <h4 style="margin:10px 0;">সব কাস্টমার</h4>
+          ${unpinnedList.map(c => renderCard(c, false)).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>'}
         </div>`;
+
+        $("designerCustomers").innerHTML = html;
       }
+    });
 
-      html += `<div>
-        <h4 style="margin:10px 0;">সব কাস্টমার</h4>
-        ${unpinnedList.map(c => renderCard(c, false)).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>'}
-      </div>`;
-
-      $("designerCustomers").innerHTML = html;
-    }
   } catch (e) { console.error(e); }
 }
 
@@ -347,7 +396,7 @@ export async function sendFile() {
   } catch (e) { alert("ফাইল আপলোড ব্যর্থ হয়েছে: " + e.message); }
 }
 
-// Admin Auth & Login
+// Admin Auth & Management
 export function adminLogin() {
   const id = $("adminId").value.trim();
   const pass = $("adminPassword").value;
@@ -359,7 +408,6 @@ export function adminLogin() {
   }
 }
 
-// Admin Dashboard & Management
 export async function loadAdminDashboard() {
   if (localStorage.getItem("adminLoggedIn") !== "true") {
     location.href = "admin-login.html";
