@@ -3,34 +3,178 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Files</title>
+
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* শুধু Notice-এর জন্য Animation */
+    .disabled-notice {
+      position: relative;
+      overflow: hidden;
+      margin-top: 20px;
+      padding: 35px 20px;
+      text-align: center;
+      border-radius: 15px;
+      background: #fff;
+      border: 2px solid transparent;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Animated Border */
+    .disabled-notice::before {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      z-index: 0;
+      background: conic-gradient(
+        from 0deg,
+        #ff9800,
+        #ffcc00,
+        #ff5722,
+        #9c27b0,
+        #2196f3,
+        #ff9800
+      );
+      animation: borderRotate 4s linear infinite;
+    }
+
+    .disabled-notice::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      z-index: 1;
+      background: #fff;
+      border-radius: 12px;
+    }
+
+    .disabled-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .disabled-icon {
+      font-size: 50px;
+      display: inline-block;
+      animation: floating 2s ease-in-out infinite;
+    }
+
+    .disabled-title {
+      margin-top: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .disabled-text {
+      margin-top: 8px;
+      color: #777;
+      font-size: 15px;
+    }
+
+    /* Infinite Animations */
+    @keyframes borderRotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes floating {
+      0%, 100% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-10px) scale(1.08);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.04);
+      }
+    }
+  </style>
 </head>
+
 <body>
 
 <header class="topbar">
   <strong id="shopName">Modern Art & Press</strong>
-  <a href="customer.html" class="btn small">Dashboard</a>
+
+  <a href="customer.html" class="btn small">
+    Dashboard
+  </a>
 </header>
 
 <main class="container">
+
   <section class="card">
+
     <h1>📁 My Design Files</h1>
-    <div id="fileList"></div>
-    <p class="muted">ডেমোতে File expiry browser storage দিয়ে দেখানো হচ্ছে। আসল Firebase ভার্সনে Storage Security + server-side expiry থাকবে।</p>
+
+    <div id="fileList">
+
+      <!-- বর্তমানে অপশনটি বন্ধ -->
+      <div class="disabled-notice">
+
+        <div class="disabled-content">
+
+          <div class="disabled-icon">
+            ⚠️
+          </div>
+
+          <div class="disabled-title">
+            গুরুত্বপূর্ণ নোটিশ
+          </div>
+
+          <div class="disabled-text">
+            বর্তমানে এই অপশনটি বন্ধ রয়েছে।
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <p class="muted">
+      ডেমোতে File expiry browser storage দিয়ে দেখানো হচ্ছে।
+      আসল Firebase ভার্সনে Storage Security + server-side expiry থাকবে।
+    </p>
+
   </section>
+
 </main>
 
 <script src="config.js"></script>
+
 <script type="module">
   import { renderFiles } from './app.js';
 
   document.addEventListener("DOMContentLoaded", () => {
-    if (typeof renderFiles === "function") {
-      renderFiles();
-    }
+
+    /*
+      ভবিষ্যতে অপশনটি চালু করলে
+      নিচের অংশটি আবার ব্যবহার করতে পারবেন।
+
+      if (typeof renderFiles === "function") {
+        renderFiles();
+      }
+    */
+
   });
 </script>
 
 </body>
 </html>
+```
