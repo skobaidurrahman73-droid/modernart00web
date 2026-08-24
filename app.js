@@ -167,8 +167,8 @@ export async function loadDesignerDashboard() {
   if ($("designerName")) $("designerName").textContent = designer.name;
   if ($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
 
-  // Request Chrome Notification Permission
-  if ("Notification" in window && Notification.permission === "default") {
+  // Notification Permission Request
+  if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
     Notification.requestPermission();
   }
 
@@ -180,7 +180,6 @@ export async function loadDesignerDashboard() {
     const pinnedKey = `pinned_cust_${designer.id}`;
     const pinnedPhones = JSON.parse(localStorage.getItem(pinnedKey) || "[]");
 
-    // Realtime Customer Message Listener & Notification
     if (designerChatUnsub) designerChatUnsub();
     
     designerChatUnsub = onSnapshot(collection(db, "chats"), (snapshot) => {
@@ -195,29 +194,36 @@ export async function loadDesignerDashboard() {
         }
       });
 
-      // Show Chrome Notification for new message
+      // Show Notification logic
       Object.keys(activeMessages).forEach(cPhone => {
         const msgs = activeMessages[cPhone];
-        const prevCount = lastKnownMessageCount[cPhone] || 0;
-        if (msgs.length > prevCount && prevCount !== 0) {
+        const prevCount = lastKnownMessageCount[cPhone];
+        
+        if (prevCount !== undefined && msgs.length > prevCount) {
           const lastMsg = msgs[msgs.length - 1];
           const custObj = customers.find(c => c.phone === cPhone);
           const senderName = custObj ? custObj.name : cPhone;
 
           if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`নতুন বার্তা: ${senderName}`, {
-              body: lastMsg.text || "একটি ফাইল পাঠিয়েছেন।",
-              icon: "https://cdn-icons-png.flaticon.com/512/732/732200.png"
-            });
+            try {
+              const notif = new Notification(`নতুন বার্তা: ${senderName}`, {
+                body: lastMsg.text || "একটি ফাইল পাঠিয়েছেন।",
+                icon: "https://cdn-icons-png.flaticon.com/512/732/732200.png"
+              });
+              notif.onclick = () => { window.focus(); };
+            } catch(e) { console.error(e); }
           }
         }
         lastKnownMessageCount[cPhone] = msgs.length;
       });
 
-      // Render Customer List with Unread Badge
+      // Render Customer List with Unread Badge check
       if ($("designerCustomers")) {
         const renderCard = (c, isPinned) => {
-          const hasUnread = (activeMessages[c.phone] || []).length > 0;
+          const lastReadTime = Number(localStorage.getItem(`lastRead_${designer.id}_${c.phone}`) || 0);
+          const custMsgs = activeMessages[c.phone] || [];
+          const hasUnread = custMsgs.some(m => (m.at || 0) > lastReadTime);
+
           return `
             <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd; ${isPinned ? 'background:#eef6ff;' : ''}">
               <div>
@@ -261,6 +267,10 @@ export async function loadDesignerDashboard() {
 }
 
 export function openChatAsDesigner(phone, name) {
+  const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
+  if (designer) {
+    localStorage.setItem(`lastRead_${designer.id}_${phone}`, Date.now());
+  }
   localStorage.setItem("activeChatCustomer", JSON.stringify({ phone, name }));
   localStorage.removeItem("selectedDesigner");
   location.href = "chat.html";
@@ -284,6 +294,7 @@ export async function loadChat() {
     chatId = `${activeCustomer.phone}_${currentDesigner.id}`;
     displayName = activeCustomer.name;
     driveUrl = currentDesigner.driveUrl || "";
+    localStorage.setItem(`lastRead_${currentDesigner.id}_${activeCustomer.phone}`, Date.now());
   } else {
     alert("চ্যাট তথ্য পাওয়া যায়নি।");
     location.href = "index.html";
