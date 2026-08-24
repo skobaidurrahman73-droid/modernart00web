@@ -87,7 +87,7 @@ export function openChatAsCustomer(id, name) {
   location.href = "chat.html";
 }
 
-// Designer Auth & Dashboard (Password Added)
+// Designer Auth & Dashboard
 export async function designerLogin() {
   const phone = $("designerPhone").value.trim();
   const pass = $("designerPassword") ? $("designerPassword").value.trim() : "";
@@ -113,6 +113,20 @@ export async function designerLogin() {
   } catch (e) { alert("Error: " + e.message); }
 }
 
+export function togglePinCustomer(phone) {
+  const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
+  if (!designer) return;
+  const key = `pinned_cust_${designer.id}`;
+  let pinned = JSON.parse(localStorage.getItem(key) || "[]");
+  if (pinned.includes(phone)) {
+    pinned = pinned.filter(p => p !== phone);
+  } else {
+    pinned.push(phone);
+  }
+  localStorage.setItem(key, JSON.stringify(pinned));
+  loadDesignerDashboard();
+}
+
 export async function loadDesignerDashboard() {
   const designer = JSON.parse(localStorage.getItem("currentDesigner") || "null");
   if (!designer) { location.href = "designer-login.html"; return; }
@@ -122,20 +136,43 @@ export async function loadDesignerDashboard() {
   try {
     const custSnap = await getDocs(collection(db, "customers"));
     const customers = custSnap.docs.map(doc => doc.data());
+    const pinnedKey = `pinned_cust_${designer.id}`;
+    const pinnedPhones = JSON.parse(localStorage.getItem(pinnedKey) || "[]");
+
     if ($("designerCustomers")) {
-      $("designerCustomers").innerHTML = customers.map(c => `
-        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd;">
+      const renderCard = (c, isPinned) => `
+        <div class="file-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd; ${isPinned ? 'background:#eef6ff;' : ''}">
           <div>
-            <strong>${escapeHTML(c.name)}</strong> ${c.vip ? '<span style="color:#d97706;font-weight:bold;">⭐ VIP</span>' : '<span class="muted">(NON-VIP)</span>'}<br>
+            <strong>${escapeHTML(c.name)}</strong> ${c.vip ? '<span style="color:#d97706;font-weight:bold;">⭐ VIP</span>' : '<span class="muted">(NON-VIP)</span>'}
+            ${isPinned ? '<span style="color:#2563eb;font-weight:bold;margin-left:5px;">📌 Pinned</span>' : ''}<br>
             <span class="muted">📱 ${escapeHTML(c.phone)}</span>
             ${c.receiptId ? `<br><span class="muted">🧾 Receipt: ${escapeHTML(c.receiptId)}</span>` : ''}
           </div>
           <div style="display:flex; gap:5px; align-items:center;">
+            <button class="btn small" onclick="togglePinCustomer('${escapeHTML(c.phone)}')">${isPinned ? "📌 Unpin" : "📌 Pin"}</button>
             <button class="btn small" onclick="toggleVip('${escapeHTML(c.phone)}', ${!c.vip})">${c.vip ? "Remove VIP" : "Make VIP"}</button>
             <button class="btn primary" style="width:auto" onclick="openChatAsDesigner('${escapeHTML(c.phone)}', '${escapeHTML(c.name)}')">Chat</button>
           </div>
         </div>
-      `).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>';
+      `;
+
+      const pinnedList = customers.filter(c => pinnedPhones.includes(c.phone));
+      const unpinnedList = customers.filter(c => !pinnedPhones.includes(c.phone));
+
+      let html = "";
+      if (pinnedList.length > 0) {
+        html += `<div style="margin-bottom:15px; border:2px solid #2563eb; border-radius:8px; padding:10px; background:#fafcff;">
+          <h4 style="margin:0 0 10px 0; color:#2563eb;">📌 পিন করা কাস্টমার</h4>
+          ${pinnedList.map(c => renderCard(c, true)).join("")}
+        </div>`;
+      }
+
+      html += `<div>
+        <h4 style="margin:10px 0;">সব কাস্টমার</h4>
+        ${unpinnedList.map(c => renderCard(c, false)).join("") || '<div class="notice">কোনো কাস্টমার পাওয়া যায়নি।</div>'}
+      </div>`;
+
+      $("designerCustomers").innerHTML = html;
     }
   } catch (e) { console.error(e); }
 }
@@ -213,7 +250,7 @@ function renderMessages(msgs) {
   box.scrollTop = box.scrollHeight;
 }
 
-// Production Messaging Functions
+// Messaging Functions
 export async function sendMessage() {
   const input = $("messageInput"), text = input ? input.value.trim() : "";
   if (!text) return;
@@ -428,7 +465,6 @@ export async function deleteSelectedChatHistory() {
   } catch (e) { alert("Error: " + e.message); }
 }
 
-// Admin Designer Add (With Password & Drive URL)
 export async function addDesigner() {
   const name = $("desName").value.trim();
   const phone = $("desPhone").value.trim();
@@ -545,17 +581,18 @@ export function logout() {
   location.href = "index.html";
 }
 
-// Global Aliases for Compatibility
+// Global Aliases
 export const sendDemoMessage = sendMessage;
 export const sendDemoFile = sendFile;
 
-// ----------------- GLOBAL WINDOW BINDINGS -----------------
+// WINDOW BINDINGS
 window.customerLogin = customerLogin;
 window.registerCustomer = registerCustomer;
 window.loadCustomerDashboard = loadCustomerDashboard;
 window.renderDesigners = renderDesigners;
 window.openChatAsCustomer = openChatAsCustomer;
 window.designerLogin = designerLogin;
+window.togglePinCustomer = togglePinCustomer;
 window.loadDesignerDashboard = loadDesignerDashboard;
 window.openChatAsDesigner = openChatAsDesigner;
 window.loadChat = loadChat;
