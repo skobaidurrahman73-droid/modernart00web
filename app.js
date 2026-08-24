@@ -87,17 +87,19 @@ export function openChatAsCustomer(id, name) {
   location.href = "chat.html";
 }
 
-// Designer Auth & Dashboard
+// Designer Auth & Dashboard (Password Added)
 export async function designerLogin() {
   const phone = $("designerPhone").value.trim();
+  const pass = $("designerPassword") ? $("designerPassword").value.trim() : "";
   const driveUrl = $("designerDriveUrl") ? $("designerDriveUrl").value.trim() : "";
-  if (!phone) return alert("ফোন নম্বর দিন।");
+  
+  if (!phone || !pass) return alert("ফোন নম্বর এবং পাসওয়ার্ড দিন।");
   
   try {
     await ensureFirebaseUser();
-    const q = query(collection(db, "designers"), where("phone", "==", phone));
+    const q = query(collection(db, "designers"), where("phone", "==", phone), where("pass", "==", pass));
     const snap = await getDocs(q);
-    if (snap.empty) return alert("অ্যাকাউন্ট পাওয়া যায়নি।");
+    if (snap.empty) return alert("ফোন নম্বর অথবা পাসওয়ার্ড ভুল!");
 
     const docSnap = snap.docs[0];
     if (driveUrl) {
@@ -170,7 +172,6 @@ export async function loadChat() {
 
   if ($("chatDesigner")) $("chatDesigner").textContent = displayName;
 
-  // 📎 আইকনে ড্রাইভের লিঙ্ক যোগ করা
   const driveBtn = $("driveBtn");
   if (driveBtn) {
     if (driveUrl) {
@@ -212,7 +213,8 @@ function renderMessages(msgs) {
   box.scrollTop = box.scrollHeight;
 }
 
-export async function sendDemoMessage() {
+// Production Messaging Functions
+export async function sendMessage() {
   const input = $("messageInput"), text = input ? input.value.trim() : "";
   if (!text) return;
 
@@ -238,8 +240,8 @@ export async function sendDemoMessage() {
   } catch (e) { alert("Error: " + e.message); }
 }
 
-export async function sendDemoFile() {
-  const fileInput = $("demoFile");
+export async function sendFile() {
+  const fileInput = $("chatFile") || $("demoFile");
   if (!fileInput || !fileInput.files[0]) return alert("দয়া করে একটি ফাইল সিলেক্ট করুন।");
   const file = fileInput.files[0];
 
@@ -426,24 +428,26 @@ export async function deleteSelectedChatHistory() {
   } catch (e) { alert("Error: " + e.message); }
 }
 
-// Admin Designer Add with Drive URL
+// Admin Designer Add (With Password & Drive URL)
 export async function addDesigner() {
   const name = $("desName").value.trim();
   const phone = $("desPhone").value.trim();
+  const pass = $("desPass") ? $("desPass").value.trim() : "";
   const speciality = $("desSpec") ? $("desSpec").value.trim() : "";
   const image = $("desImage") ? $("desImage").value.trim() : "";
   const driveUrl = $("desDriveUrl") ? $("desDriveUrl").value.trim() : "";
 
-  if (!name || !phone) return alert("নাম এবং ফোন নম্বর দিন।");
+  if (!name || !phone || !pass) return alert("নাম, ফোন নম্বর এবং পাসওয়ার্ড প্রদান করুন।");
 
   try {
     await ensureFirebaseUser();
     await addDoc(collection(db, "designers"), { 
-      name, phone, speciality, image, driveUrl, createdAt: Date.now() 
+      name, phone, pass, speciality, image, driveUrl, createdAt: Date.now() 
     });
     alert("ডিজাইনার যুক্ত করা হয়েছে!");
     if ($("desName")) $("desName").value = "";
     if ($("desPhone")) $("desPhone").value = "";
+    if ($("desPass")) $("desPass").value = "";
     if ($("desSpec")) $("desSpec").value = "";
     if ($("desImage")) $("desImage").value = "";
     if ($("desDriveUrl")) $("desDriveUrl").value = "";
@@ -541,6 +545,10 @@ export function logout() {
   location.href = "index.html";
 }
 
+// Global Aliases for Compatibility
+export const sendDemoMessage = sendMessage;
+export const sendDemoFile = sendFile;
+
 // ----------------- GLOBAL WINDOW BINDINGS -----------------
 window.customerLogin = customerLogin;
 window.registerCustomer = registerCustomer;
@@ -551,6 +559,8 @@ window.designerLogin = designerLogin;
 window.loadDesignerDashboard = loadDesignerDashboard;
 window.openChatAsDesigner = openChatAsDesigner;
 window.loadChat = loadChat;
+window.sendMessage = sendMessage;
+window.sendFile = sendFile;
 window.sendDemoMessage = sendDemoMessage;
 window.sendDemoFile = sendDemoFile;
 window.adminLogin = adminLogin;
