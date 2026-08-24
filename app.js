@@ -1,4 +1,4 @@
-import { db, auth, storage, ensureFirebaseUser } from "./firebase-config.js";
+import { db, auth, storage, ensureFirebaseUser, firebaseApp } from "./firebase-config.js";
 import { 
   doc, getDoc, setDoc, collection, addDoc, query, where, onSnapshot, getDocs, deleteDoc 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -6,6 +6,29 @@ import {
   ref, uploadBytes, getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging.js";
+
+// Service Worker & FCM Setup
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js');
+}
+const messaging = getMessaging(firebaseApp);
+
+export async function enablePushNotifications(userId, collectionName) {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const token = await getToken(messaging, { 
+        vapidKey: 'BJp5hiWTGF9plNDaYJW0Ionc2ox4jWTkzEBdvYG9q8pJk7tZZ0NT5_I3Sj_MO1IZRCLZfoIHEkhg0yr-aPvPi1E' 
+      });
+      if (token) {
+        await setDoc(doc(db, collectionName, userId), { fcmToken: token }, { merge: true });
+      }
+    }
+  } catch (err) {
+    console.error('FCM Error:', err);
+  }
+}
 
 const $ = id => document.getElementById(id);
 const escapeHTML = str => String(str ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -60,6 +83,7 @@ export async function loadCustomerDashboard() {
   const phone = localStorage.getItem("currentCustomer");
   if (!phone) { location.href = "index.html"; return; }
   try {
+    enablePushNotifications(phone, "customers");
     const snap = await getDoc(doc(db, "customers", phone));
     if (!snap.exists()) { location.href = "index.html"; return; }
     const c = snap.data();
@@ -167,10 +191,7 @@ export async function loadDesignerDashboard() {
   if ($("designerName")) $("designerName").textContent = designer.name;
   if ($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
 
-  // Notification Permission Request
-  if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-    Notification.requestPermission();
-  }
+  enablePushNotifications(designer.id, "designers");
 
   try {
     loadNoticesForUser("designer");
@@ -678,6 +699,7 @@ export const sendDemoMessage = sendMessage;
 export const sendDemoFile = sendFile;
 
 // WINDOW BINDINGS
+window.enablePushNotifications = enablePushNotifications;
 window.customerLogin = customerLogin;
 window.registerCustomer = registerCustomer;
 window.loadCustomerDashboard = loadCustomerDashboard;
