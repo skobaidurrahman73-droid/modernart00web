@@ -10,17 +10,23 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/fi
 const $ = id => document.getElementById(id);
 const escapeHTML = str => String(str ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
 
-// Branding
+// Branding & Theme Initialization
 function applyBranding() {
   if (typeof SHOP_CONFIG !== "undefined") {
     document.querySelectorAll("#shopName").forEach(x => x.textContent = SHOP_CONFIG.shopName);
     const link = $("emergencyLink");
     if (link) { link.textContent = SHOP_CONFIG.emergencyNumber; link.href = "tel:" + SHOP_CONFIG.emergencyNumber; }
   }
+  const savedColor = localStorage.getItem("themeColor");
+  if (savedColor) {
+    document.documentElement.style.setProperty('--primary-color', savedColor);
+    document.documentElement.style.setProperty('--main-bg', savedColor);
+    document.documentElement.style.setProperty('--theme-color', savedColor);
+  }
 }
 document.addEventListener("DOMContentLoaded", applyBranding);
 
-// Customer Auth
+// Customer Auth & Dashboard
 export async function customerLogin() {
   const phone = $("phone").value.trim(), receipt = $("receiptId") ? $("receiptId").value.trim() : "";
   if (!phone) return alert("ফোন নম্বর দিন।");
@@ -60,7 +66,33 @@ export async function loadCustomerDashboard() {
     if ($("customerName")) $("customerName").textContent = c.name;
     if ($("customerPhone")) $("customerPhone").textContent = c.phone;
     if ($("vipStatus")) $("vipStatus").textContent = c.vip ? "⭐ VIP" : "NON-VIP";
+
+    // Load Notices for Customer
+    loadNoticesForUser("customer");
   } catch (e) { console.error(e); }
+}
+
+// Notice Loader for Users
+async function loadNoticesForUser(userType) {
+  const noticeBox = $("noticeBoard") || $("userNotice");
+  if (!noticeBox) return;
+  try {
+    const snap = await getDocs(collection(db, "notices"));
+    const notices = snap.docs
+      .map(d => d.data())
+      .filter(n => n.target === "all" || n.target === userType || n.target === userType + "s")
+      .sort((a, b) => (b.at || 0) - (a.at || 0));
+
+    if (notices.length > 0) {
+      noticeBox.innerHTML = notices.map(n => `
+        <div style="background:#fff3cd; color:#856404; padding:10px; border-radius:6px; margin-bottom:8px; border:1px solid #ffeeba;">
+          📢 <strong>নোটিশ:</strong> ${escapeHTML(n.text)}
+        </div>
+      `).join("");
+    } else {
+      noticeBox.innerHTML = "";
+    }
+  } catch (e) { console.error("Notice error:", e); }
 }
 
 // Customer Chat & Designer List
@@ -134,6 +166,8 @@ export async function loadDesignerDashboard() {
   if ($("designerPhoneView")) $("designerPhoneView").textContent = designer.phone;
 
   try {
+    loadNoticesForUser("designer");
+
     const custSnap = await getDocs(collection(db, "customers"));
     const customers = custSnap.docs.map(doc => doc.data());
     const pinnedKey = `pinned_cust_${designer.id}`;
@@ -539,29 +573,28 @@ export async function editUser(coll, id) {
 }
 
 export async function sendNotice() {
-  const target = $("noticeTarget").value;
-  const text = $("noticeText").value.trim();
+  const target = $("noticeTarget") ? $("noticeTarget").value : "all";
+  const textInput = $("noticeText");
+  const text = textInput ? textInput.value.trim() : "";
   if (!text) return alert("নোটিশ লিখুন।");
 
   try {
     await addDoc(collection(db, "notices"), { target, text, at: Date.now() });
-    alert("নোটিশ পাঠানো হয়েছে!");
-    $("noticeText").value = "";
+    alert("নোটিশ সফলভাবে পাঠানো হয়েছে!");
+    if (textInput) textInput.value = "";
   } catch (e) { alert("Error: " + e.message); }
 }
 
-export async function updateSiteLogo() {
-  const logo = $("siteLogoUrl").value.trim();
-  if (!logo) return;
-  localStorage.setItem("siteLogo", logo);
-  alert("লোগো পরিবর্তন করা হয়েছে!");
-}
-
 export async function updateThemeColor() {
-  const color = $("themeColor").value;
+  const colorInput = $("themeColor");
+  const color = colorInput ? colorInput.value : "";
+  if (!color) return;
+
+  document.documentElement.style.setProperty('--primary-color', color);
   document.documentElement.style.setProperty('--main-bg', color);
+  document.documentElement.style.setProperty('--theme-color', color);
   localStorage.setItem("themeColor", color);
-  alert("ডিজাইন কালার সেট হয়েছে!");
+  alert("থিম কালার সফলভাবে পরিবর্তন করা হয়েছে!");
 }
 
 export async function clearOldData() {
@@ -613,7 +646,6 @@ window.toggleVip = toggleVip;
 window.toggleBanUser = toggleBanUser;
 window.editUser = editUser;
 window.sendNotice = sendNotice;
-window.updateSiteLogo = updateSiteLogo;
 window.updateThemeColor = updateThemeColor;
 window.clearOldData = clearOldData;
 window.logout = logout;
