@@ -15,10 +15,10 @@ admin-login.html
 admin.html
 
 Folders:
-css/style.css
-js/config.js
-js/app.js
-js/firebase-config.js
+style.css
+config.js
+app.js
+firebase-config.js
 
 নোট:
 এটি starter/demo build। Production ব্যবহারের আগে Firebase Firestore/Storage
